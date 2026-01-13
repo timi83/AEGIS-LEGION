@@ -333,7 +333,7 @@ export default function Settings() {
                         <button
                             className="btn-ghost"
                             style={{ border: '1px solid var(--border)', padding: '10px 20px' }}
-                            onClick={() => window.open('/api/servers/agent/download', '_blank')}
+                            onClick={() => window.open(`${import.meta.env.VITE_API_URL}/api/servers/agent/download`, '_blank')}
                         >
                             ⬇ DOWNLOAD AGENT SCRIPT
                         </button>

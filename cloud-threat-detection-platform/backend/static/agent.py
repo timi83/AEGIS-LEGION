@@ -4,7 +4,15 @@ try:
     import psutil
 except ImportError:
     psutil = None
-import requests
+try:
+    import requests
+except ImportError:
+    print("❌ Critical Error: The 'requests' library is missing.")
+    print("👉 Please run this command to install required packages:")
+    print("   pip install requests psutil")
+    print("   (On Mac/Linux: pip3 install requests psutil)")
+    import sys
+    sys.exit(1)
 import random
 import platform
 import socket

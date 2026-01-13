@@ -11,7 +11,7 @@ import socket
 import logging
 
 # Configuration
-API_URL = "http://127.0.0.1:8001/api"
+API_URL = "https://aegis-legion.onrender.com/api"
 # ---------------------------------------------------------
 # 🔑 PASTE YOUR API KEY HERE
 # ---------------------------------------------------------

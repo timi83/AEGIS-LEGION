@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .header {
+            background-color: #f4f4f4;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .footer {
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- USER EDITABLE: Main Logo Image -->
+            <img src="https://via.placeholder.com/150x50?text=Company+Logo" alt="Company Logo"
+                style="max-height: 50px;">
+            <h2>Welcome to CTDIRP Platform</h2>
+        </div>
+
+        <div class="content">
+            <!-- USER EDITABLE: Welcome Message Text -->
+            <p>Hello <strong>{{username}}</strong>,</p>
+
+            <p>Welcome to Aegis Legion a Cloud Threat Detection & Incident Response Platform. Your account has been
+                successfully
+                created!!.</p>
+
+            <p>You can now log in to the dashboard to monitor your organization's security posture.</p>
+
+            <p style="text-align: center;">
+                <a href="{{login_url}}" class="button">Login to Dashboard</a>
+            </p>
+
+            <!-- USER EDITABLE: Additional Info showing Image Support -->
+            <h3>Getting Started</h3>
+            <p>Here is a quick overview of what you can do:</p>
+            <ul>
+                <li>Monitor Real-time Threats</li>
+                <li>Manage API Keys</li>
+                <li>Review Incident Reports</li>
+            </ul>
+            <!-- Example Image -->
+            <img src="cid:dashboard_image" alt="Dashboard Preview"
+                style="width: 100%; border-radius: 5px; margin-top: 10px;">
+
+            <p>If you have any questions, please contact your Organization Administrator.</p>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 CTDIRP Security Team. All rights reserved.</p>
+            <p>Organization: {{organization}}</p>
+        </div>
+    </div>
+</body>
+
+</html>

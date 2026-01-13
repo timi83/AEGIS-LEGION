@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom theme - futuristic cyberpunk hacker aesthetic */
+:root {
+  --bg: #000000;
+  --panel: #0a0a0a;
+  --neutral: #000000;
+  /* Updated to black for solid background */
+  --accent: #00ffff;
+  /* neon cyan */
+  --muted: #00ff88;
+  /* neon green */
+  --danger: #ff0040;
+  /* neon pink for errors/risks */
+  --warn: #ffff00;
+  /* yellow for warnings */
+  --ok: #00ff41;
+  /* bright green */
+  --neon-glow: 0 0 2px currentColor, 0 0 4px currentColor, 0 0 6px currentColor;
+}
+
+/* make body fullscreen cyber dark */
+html,
+body {
+  height: 100%;
+}
+
+#root {
+  height: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+body {
+  background: var(--bg);
+  /* Solid black background */
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Subtle Shield Outline Background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 10%;
+  /* Slightly offset from top for balance */
+  left: 50%;
+  transform: translateX(-50%) scale(0.12);
+  /* Centered, small scale */
+  width: 200px;
+  /* Base size for SVG */
+  height: 200px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'%3E%3Cpath d='M50 0 L20 20 Q20 60 50 100 Q80 60 80 20 Z' stroke='%2300ff88' stroke-width='1' fill='none' opacity='0.03' filter='blur(0.5px)'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+  z-index: -1;
+  /* Behind scan lines and Matrix */
+}
+
+/* Scan lines for terminal feel - subtler (now on ::after to layer over shield) */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 136, 0.005) 2px,
+      rgba(0, 255, 136, 0.005) 4px);
+  pointer-events: none;
+  z-index: 0;
+  /* Above shield, below content */
+}
+
+/* panel-like card with neon borders */
+.card {
+  background: linear-gradient(180deg, var(--neutral), rgba(0, 0, 0, 0.85));
+  border: 1px solid rgba(42, 42, 42, 0.4);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.1), inset 0 0 4px rgba(0, 255, 136, 0.02);
+  border-radius: 8px;
+  position: relative;
+}
+
+/* glowing accent for hacker text */
+.accent {
+  color: var(--accent);
+  text-shadow: var(--neon-glow);
+  /* animation: pulse 2s infinite; */
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* subtle header with glow */
+.header {
+  font-weight: 600;
+  color: var(--accent);
+  /* text-shadow: var(--neon-glow); Removed per user request */
+}
+
+/* Glitch effect on hover for interactive elements */
+/* Glitch effect removed */
+
+@keyframes glitch {
+  0% {
+    transform: translate(0);
+  }
+
+  20% {
+    transform: translate(-2px, 2px);
+  }
+
+  40% {
+    transform: translate(-2px, -2px);
+  }
+
+  60% {
+    transform: translate(2px, 2px);
+  }
+
+  80% {
+    transform: translate(2px, -2px);
+  }
+
+  100% {
+    transform: translate(0);
+  }
+}

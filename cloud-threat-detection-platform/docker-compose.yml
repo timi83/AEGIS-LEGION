@@ -1,0 +1,99 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: ctdirp_backend
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --log-level debug
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    environment:
+      PYTHONUNBUFFERED: 1
+      KAFKA_BOOTSTRAP_SERVERS: ctdirp_kafka:29092
+      DATABASE_URL: postgresql://postgres:password@db:5432/ctdirp
+    depends_on:
+      - db
+      - kafka
+    networks:
+      - ctdirp_network
+
+  db:
+    image: postgres:15
+    container_name: ctdirp_postgres
+    restart: always
+    # Security: Do not expose DB port to host in production
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ctdirp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ctdirp_network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: ctdirp_zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - ctdirp_network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: ctdirp_kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "ctdirp_zookeeper:2181"
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://ctdirp_kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+    networks:
+      - ctdirp_network
+
+  mongodb:
+    image: mongo:5
+    container_name: ctdirp_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+    networks:
+      - ctdirp_network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.prod
+    container_name: ctdirp_frontend
+    ports:
+      - "5173:80" # Map host 5173 to container 80 (Nginx)
+    depends_on:
+      - backend
+    networks:
+      - ctdirp_network
+
+volumes:
+  postgres_data:
+  mongo_data:
+
+
+networks:
+  ctdirp_network:
+    driver: bridge

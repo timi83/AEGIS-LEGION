@@ -81,7 +81,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
             fetchNotes(); // Refresh immediately
         } catch (e) {
             console.error("Failed to add note", e);
-            alert("Failed to add note");
+            alert("Failed to add note: " + (e.response?.data?.detail || e.message));
         } finally {
             setLoading(false);
         }

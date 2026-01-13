@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from kafka import KafkaConsumer
 from fastapi.middleware.cors import CORSMiddleware
 from src.database import init_db, get_db
-from src.models import user, server, incident, rule, audit_log
+from src.models import user, server, incident, rule, audit_log, incident_note, notification
 from src.routes import incidents_router, rules_router, ingest_router, auth_router, servers, notifications_router
 from src.routes.events import router as events_router
 from slowapi import Limiter, _rate_limit_exceeded_handler

@@ -55,8 +55,8 @@ if env_origins:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, 
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow ALL origins (Vercel, localhost, etc.)
+    allow_credentials=False, # We use Token Auth (Headers), so Cookies/Creds not needed. This allows wildcard origin.
     allow_methods=["*"],
     allow_headers=["*"],
 )

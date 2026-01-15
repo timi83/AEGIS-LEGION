@@ -12,9 +12,13 @@ logger.setLevel(logging.INFO)
 # Configuration
 
 # Configuration
+# Configuration
 MODEL_DIR = "models"
 if not os.path.exists(MODEL_DIR):
     os.makedirs(MODEL_DIR)
+
+TRAINING_BUFFER_SIZE = 100
+ANOMALY_THRESHOLD = -0.6
 
 class AnomalyDetector:
     def __init__(self, organization_id: int | str = "global"):

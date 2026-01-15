@@ -62,20 +62,21 @@ class HeartbeatSchema(BaseModel):
     cpu: Optional[float] = 0.0
     ram: Optional[float] = 0.0
 
-from src.services.anomaly_detector import detector
+from src.services.anomaly_detector import manager
 
 @router.get("/ml/status")
 def get_ml_status(user: User = Depends(get_current_user)):
-    """Get the current training status of the ML Engine."""
-    return detector.get_status()
+    """Get the current training status of the ML Engine (Scoped to Org)."""
+    return manager.get_detector(user.organization_id).get_status()
 
 @router.post("/ml/reset")
 def reset_ml_model(user: User = Depends(get_current_user)):
-    """Reset the ML model to training mode."""
+    """Reset the ML model to training mode (Scoped to Org)."""
     if user.role != 'admin':
         raise HTTPException(status_code=403, detail="Only admins can reset the ML brain.")
-    detector.reset()
-    return {"status": "ML Brain Reset to Training Mode"}
+    
+    manager.get_detector(user.organization_id).reset()
+    return {"status": f"ML Brain Reset for Org {user.organization_id}"}
 
 @router.get("/agent/download")
 def download_agent():
@@ -149,7 +150,8 @@ def server_heartbeat(
             "event_type": "system_heartbeat", # detector expects this
             "data": {"cpu": payload.cpu, "ram": payload.ram}
         }
-        anomaly = detect_anomaly(ml_event)
+        # Pass Org ID for multi-tenant isolation
+        anomaly = detect_anomaly(ml_event, organization_id=user.organization_id)
         
         if anomaly:
             print(f"🧠 ML DETECTED ANOMALY: {anomaly}")

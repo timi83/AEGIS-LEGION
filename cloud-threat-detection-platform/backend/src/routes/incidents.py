@@ -14,12 +14,21 @@ router = APIRouter(prefix="/incidents", tags=["Incidents"])
 
 @router.post("/", response_model=dict)
 def create_incident(title: str, description: str, severity: str, status: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
+    # Calculate next scoped ID (friendly ID)
+    # Lock or just query (using max) - for this scale, max() is fine.
+    # We use current_user.organization_id
+    last_inc = db.query(Incident).filter(Incident.organization_id == current_user.organization_id).order_by(Incident.org_incident_id.desc()).first()
+    next_id = (last_inc.org_incident_id or 0) + 1 if last_inc else 1
+    
     new_incident = Incident(
         title=title,
         description=description,
         severity=severity,
         status=status,
         user_id=current_user.id,
+        organization_id=current_user.organization_id,
+        org_incident_id=next_id,
         timestamp=datetime.utcnow()
     )
     db.add(new_incident)

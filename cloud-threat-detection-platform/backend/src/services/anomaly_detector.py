@@ -10,33 +10,39 @@ logger = logging.getLogger("ctdirp.ml")
 logger.setLevel(logging.INFO)
 
 # Configuration
-MODEL_PATH = "model_isolation_forest_v2.pkl" # v2 uses 5 features
-TRAINING_BUFFER_SIZE = 100 
-ANOMALY_THRESHOLD = -0.6    
+
+# Configuration
+MODEL_DIR = "models"
+if not os.path.exists(MODEL_DIR):
+    os.makedirs(MODEL_DIR)
 
 class AnomalyDetector:
-    def __init__(self):
+    def __init__(self, organization_id: int | str = "global"):
+        self.organization_id = organization_id
+        # Unique model path per organization
+        self.model_path = os.path.join(MODEL_DIR, f"model_org_{organization_id}.pkl")
+        
         self.model = None
         self.buffer = deque(maxlen=TRAINING_BUFFER_SIZE)
         self.is_trained = False
         self.training_mode = True
         
         # Load existing model if available
-        if os.path.exists(MODEL_PATH):
+        if os.path.exists(self.model_path):
             try:
-                self.model = joblib.load(MODEL_PATH)
+                self.model = joblib.load(self.model_path)
                 self.is_trained = True
                 self.training_mode = False
-                logger.info("🧠 Loaded existing ML model.")
+                logger.info(f"🧠 Loaded existing ML model for Org {organization_id}.")
             except Exception as e:
-                logger.error(f"Failed to load model: {e}")
+                logger.error(f"Failed to load model for Org {organization_id}: {e}")
 
     def train(self):
         """Train the Isolation Forest model on buffered data."""
         if len(self.buffer) < TRAINING_BUFFER_SIZE:
             return
 
-        logger.info(f"🧠 Training model on {len(self.buffer)} events...")
+        logger.info(f"🧠 Training model for Org {self.organization_id} on {len(self.buffer)} events...")
         try:
             X = np.array(self.buffer)
             self.model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
@@ -46,11 +52,11 @@ class AnomalyDetector:
             self.training_mode = False
             
             # Save model
-            joblib.dump(self.model, MODEL_PATH)
-            logger.info("✅ Model trained and saved!")
+            joblib.dump(self.model, self.model_path)
+            logger.info(f"✅ Model trained and saved for Org {self.organization_id}!")
             
         except Exception as e:
-            logger.error(f"Training failed: {e}")
+            logger.error(f"Training failed for Org {self.organization_id}: {e}")
 
     def get_status(self) -> dict:
         """Returns the current status of the ML model."""
@@ -59,7 +65,8 @@ class AnomalyDetector:
             "samples": len(self.buffer),
             "required_samples": TRAINING_BUFFER_SIZE,
             "progress": int((len(self.buffer) / TRAINING_BUFFER_SIZE) * 100) if self.training_mode else 100,
-            "trained": self.is_trained
+            "trained": self.is_trained,
+            "organization_id": self.organization_id
         }
 
     def reset(self):
@@ -68,10 +75,10 @@ class AnomalyDetector:
         self.model = None
         self.is_trained = False
         self.training_mode = True
-        if os.path.exists(MODEL_PATH):
+        if os.path.exists(self.model_path):
             try:
-                os.remove(MODEL_PATH)
-                logger.info("🗑️ Deleted ML model file.")
+                os.remove(self.model_path)
+                logger.info(f"🗑️ Deleted ML model file for Org {self.organization_id}.")
             except Exception as e:
                 logger.error(f"Failed to delete model file: {e}")
         logger.info("🔄 ML Model Reset to Training Mode.")
@@ -103,7 +110,7 @@ class AnomalyDetector:
             self.buffer.append(features)
             remaining = TRAINING_BUFFER_SIZE - len(self.buffer)
             if remaining % 10 == 0:
-                logger.info(f"🧠 Learning... {len(self.buffer)}/{TRAINING_BUFFER_SIZE} samples collected.")
+                logger.info(f"🧠 Org {self.organization_id} Learning... {len(self.buffer)}/{TRAINING_BUFFER_SIZE} samples collected.")
             
             if len(self.buffer) >= TRAINING_BUFFER_SIZE:
                 self.train()
@@ -118,7 +125,7 @@ class AnomalyDetector:
                 score = self.model.score_samples(X)[0]
 
                 if pred == -1:
-                    logger.warning(f"🚨 Anomaly Detected! Score: {score:.2f} | Data: {features}")
+                    logger.warning(f"🚨 Org {self.organization_id} Anomaly Detected! Score: {score:.2f} | Data: {features}")
                     return {
                         "score": float(score),
                         "reason": f"Anomaly Detected (Score: {score:.2f})",
@@ -128,13 +135,36 @@ class AnomalyDetector:
                         }
                     }
             except Exception as e:
-                logger.error(f"Inference error (Model Mismatch? Resetting...): {e}")
+                logger.error(f"Inference error Org {self.organization_id} (Model Mismatch? Resetting...): {e}")
                 self.reset() # Auto-reset if shape mismatch occurs
 
         return None
 
-# Global instance
-detector = AnomalyDetector()
+# -------------------------------------------------------------------
+# Multi-Tenant Manager
+# -------------------------------------------------------------------
+class OrganizationMLManager:
+    def __init__(self):
+        self.detectors = {} # { org_id: AnomalyDetector }
 
-def detect_anomaly(event: dict) -> dict | None:
+    def get_detector(self, organization_id: int | str | None) -> AnomalyDetector:
+        # Fallback to "global" if no org ID provided (legacy support)
+        key = organization_id if organization_id is not None else "global"
+        
+        if key not in self.detectors:
+            logger.info(f"🆕 Initializing new AnomalyDetector for Org: {key}")
+            self.detectors[key] = AnomalyDetector(organization_id=key)
+        
+        return self.detectors[key]
+
+# Global Singleton Manager
+manager = OrganizationMLManager()
+
+def detect_anomaly(event: dict, organization_id: int | str | None = None) -> dict | None:
+    # Prefer explicit org_id, then check event dict
+    if organization_id is None:
+        organization_id = event.get("organization_id")
+        
+    detector = manager.get_detector(organization_id)
     return detector.process_event(event)
+

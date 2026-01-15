@@ -87,6 +87,18 @@ def _update_existing_incident(db: Session, incident: Incident, event: dict):
 
 def _create_incident(db: Session, title: str, description: str, severity: str, user_id: int, source: str = None, status="Open"):
     try:
+        # Resolve Organization ID from User
+        from src.models.user import User
+        user = db.query(User).filter(User.id == user_id).first()
+        org_id = user.organization_id if user else None
+        
+        # Calculate next scoped ID
+        next_id = 1
+        if org_id:
+            last_inc = db.query(Incident).filter(Incident.organization_id == org_id).order_by(Incident.org_incident_id.desc()).first()
+            if last_inc and last_inc.org_incident_id:
+                next_id = last_inc.org_incident_id + 1
+
         inc = Incident(
             title=title,
             description=description,
@@ -96,6 +108,8 @@ def _create_incident(db: Session, title: str, description: str, severity: str, u
             updated_at=datetime.utcnow(),
             alert_count=1,
             user_id=user_id,
+            organization_id=org_id,
+            org_incident_id=next_id,
             source=source
         )
         db.add(inc)

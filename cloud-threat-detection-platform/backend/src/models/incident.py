@@ -18,6 +18,10 @@ class Incident(Base):
     # Short title for dashboards
     title = Column(String(255), nullable=False)
 
+    # Multi-Tenancy Scoping
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
+    org_incident_id = Column(Integer, nullable=True, index=True) # Friendly ID (1, 2, 3...) scoped to Org
+
     # Source of the incident (e.g., hostname) - Critical for Granular Access Control
     source = Column(String(255), index=True, nullable=True)
 

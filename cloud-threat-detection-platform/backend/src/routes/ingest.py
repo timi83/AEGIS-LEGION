@@ -138,8 +138,8 @@ async def ingest_event(
     # ----------------------------
     if payload.event_type == "system_heartbeat":
         try:
-            # Pass dictionary representation to detector
-            anomaly = detect_anomaly(event_dict)
+            # Pass dictionary representation to detector with ORG CONTEXT
+            anomaly = detect_anomaly(event_dict, organization_id=user.organization_id)
             
             if anomaly:
                 print(f"🧠 ML DETECTED ANOMALY: {anomaly}")

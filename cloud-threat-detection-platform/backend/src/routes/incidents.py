@@ -85,6 +85,7 @@ def get_all_incidents(db: Session = Depends(get_db), current_user: User = Depend
         return [
             {
                 "id": i.id,
+                "org_incident_id": i.org_incident_id,
                 "event_id": getattr(i, "event_id", None),
                 "title": i.title,
                 "description": i.description,
@@ -113,6 +114,7 @@ def get_incident(incident_id: int, db: Session = Depends(get_db), current_user: 
 
     return {
         "id": incident.id,
+        "org_incident_id": incident.org_incident_id,
         "title": incident.title,
         "description": incident.description,
         "severity": incident.severity,

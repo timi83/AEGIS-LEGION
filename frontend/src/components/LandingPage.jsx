@@ -1,273 +1,306 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import DottedSurface from './DottedSurface';
+
+const features = [
+    {
+        title: 'REAL-TIME MONITORING',
+        desc: 'Live heartbeat tracking of all organization assets.',
+    },
+    {
+        title: 'THREAT DETECTION',
+        desc: 'Automated anomaly detection using advanced heuristics.',
+    },
+    {
+        title: 'DATA ISOLATION',
+        desc: 'Strict multi-tenant architecture ensures data sovereignty.',
+    },
+];
 
 export default function LandingPage() {
     const navigate = useNavigate();
 
     return (
         <div style={{
+            position: 'relative',
             minHeight: '100vh',
-            background: 'var(--bg-dark)',
-            color: 'var(--text-main)',
-            display: 'flex',
-            flexDirection: 'column',
             overflow: 'hidden',
-            position: 'relative'
+
+            // backgroundColor: 'black', // Removed to reveal dots
+            color: 'white',
         }}>
-            {/* Global styles and animations */}
+            {/* 3D Background */}
+            <DottedSurface />
+
+            {/* Global Animations & Styles */}
             <style>{`
                 @keyframes fadeInUp {
-                    0% {
-                        opacity: 0;
-                        transform: translateY(40px);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    from { opacity: 0; transform: translateY(40px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
-
                 @keyframes glowPulse {
-                    0%, 100% {
-                        text-shadow: 0 0 20px rgba(0, 255, 157, 0.5);
+                    0%, 100% { 
+                        text-shadow: 0 0 20px rgba(0, 255, 157, 0.5); 
                     }
-                    50% {
-                        text-shadow: 0 0 35px rgba(0, 255, 157, 0.8);
-                    }
-                }
-
-                @keyframes moveGrid {
-                    0% {
-                        background-position: 0px 0px, 0px 0px;
-                    }
-                    100% {
-                        background-position: 50px 50px, 50px 50px;
+                    50% { 
+                        text-shadow: 0 0 35px rgba(0, 255, 157, 0.8); 
                     }
                 }
-
                 @keyframes scanLine {
-                    0% {
-                        transform: translateY(-100vh);
-                    }
-                    100% {
-                        transform: translateY(200vh);
-                    }
+                    0% { transform: translateY(-100vh); }
+                    100% { transform: translateY(200vh); }
+                }
+                @keyframes float {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-12px); }
                 }
 
-                .btn, .btn-ghost {
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                .animate-fadeInUp {
+                    animation: fadeInUp 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
                 }
-
-                .btn:hover, .btn-ghost:hover {
+                .animate-glowPulse {
+                    animation: glowPulse 6s ease-in-out infinite;
+                }
+                .animate-float {
+                    animation: float 6s ease-in-out infinite;
+                }
+                
+                .hover-scale {
+                    transition: transform 0.3s ease, background-color 0.3s, box-shadow 0.3s;
+                }
+                .hover-scale:hover {
                     transform: scale(1.05);
-                    box-shadow: 0 0 40px rgba(0, 255, 157, 0.4);
                 }
-
-                .feature-card {
-                    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-
-                .feature-card:hover {
-                    transform: translateY(-15px);
-                    border-color: var(--accent);
-                    box-shadow: 0 20px 40px rgba(0, 255, 157, 0.25);
-                }
-
-                .scan-container {
-                    position: absolute;
-                    inset: 0;
-                    pointer-events: none;
-                    z-index: 1;
-                    overflow: hidden;
-                }
-
+                
                 .scan-line {
                     position: absolute;
                     left: 0;
                     width: 100%;
-                    height: 2px;
-                    background: var(--accent);
-                    opacity: 0.25;
-                    box-shadow: 0 0 30px var(--accent), 0 0 60px rgba(0, 255, 157, 0.3);
+                    height: 1px;
+                    background: #00ff9d;
+                    opacity: 0.3;
+                    box-shadow: 0 0 30px #00ff9d;
                     animation: scanLine 20s linear infinite;
-                }
-
-                .scan-line:nth-child(2) {
-                    animation-delay: 10s;
+                    pointer-events: none;
+                    z-index: 20;
                 }
             `}</style>
 
-            {/* Subtle scanning effect overlay */}
-            <div className="scan-container">
-                <div className="scan-line"></div>
-                <div className="scan-line"></div>
-            </div>
-
-            {/* Nav */}
-            <nav style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: 'clamp(1.5rem, 4vw, 2rem) clamp(2rem, 6vw, 3.5rem)',
-                alignItems: 'center',
-                zIndex: 10,
-                flexWrap: 'wrap',
-                gap: '1rem'
-            }}>
-                <div style={{ 
-                    fontSize: 'clamp(1.6rem, 4.5vw, 2rem)', 
-                    fontWeight: 'bold', 
-                    letterSpacing: '3px', 
-                    color: 'var(--accent)',
-                    textShadow: '0 0 20px rgba(0, 255, 157, 0.5)',
-                    animation: 'glowPulse 4s ease-in-out infinite'
-                }}>
-                    AEGIS LEGION
-                </div>
-                <div style={{ display: 'flex', gap: 'clamp(10px, 2vw, 15px)' }}>
-                    <button onClick={() => navigate('/login')} className="btn-ghost">LOGIN</button>
-                    <button onClick={() => navigate('/register')} className="btn">ACCESS TERMINAL</button>
-                </div>
-            </nav>
-
-            {/* Hero Section */}
-            <main style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center',
-                padding: '0 clamp(1.25rem, 5vw, 2.5rem)',
-                zIndex: 10,
-                background: 'radial-gradient(circle at center, rgba(0, 255, 157, 0.08) 0%, transparent 70%)'
-            }}>
-                <h1 style={{
-                    fontSize: 'clamp(3rem, 8vw, 4.2rem)',
-                    textTransform: 'uppercase',
-                    marginBottom: '20px',
-                    fontWeight: 800,
-                    textShadow: '0 0 30px rgba(0, 255, 157, 0.6)',
-                    animation: 'fadeInUp 1.2s cubic-bezier(0.4, 0, 0.2, 1) both, glowPulse 5s ease-in-out infinite'
-                }}>
-                    Global Command <span style={{ color: 'var(--accent)' }}>Center</span>
-                </h1>
-                <p style={{
-                    fontSize: 'clamp(1rem, 2.5vw, 1.3rem)',
-                    maxWidth: 'clamp(500px, 70vw, 800px)',
-                    lineHeight: '1.7',
-                    color: 'var(--text-muted)',
-                    marginBottom: '50px',
-                    animation: 'fadeInUp 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both'
-                }}>
-                    Centralized threat detection and infrastructure monitoring for the modern enterprise.
-                    Secure your assets with military-grade surveillance and automated response protocols.
-                </p>
-                <div style={{ 
-                    display: 'flex', 
-                    gap: 'clamp(20px, 4vw, 25px)',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    animation: 'fadeInUp 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both'
-                }}>
-                    <button
-                        onClick={() => navigate('/register')}
-                        className="btn"
-                        style={{ 
-                            padding: 'clamp(12px, 2vw, 16px) clamp(35px, 6vw, 45px)', 
-                            fontSize: 'clamp(1.1rem, 2.2vw, 1.3rem)',
-                            boxShadow: '0 0 35px rgba(0, 255, 157, 0.25)' 
-                        }}
-                    >
-                        GET STARTED
-                    </button>
-                    <button
-                        onClick={() => navigate('/login')}
-                        className="btn-ghost"
-                        style={{ 
-                            padding: 'clamp(12px, 2vw, 16px) clamp(35px, 6vw, 45px)', 
-                            fontSize: 'clamp(1.1rem, 2.2vw, 1.3rem)'
-                        }}
-                    >
-                        LIVE DEMO
-                    </button>
-                </div>
-            </main>
-
-            {/* Features */}
+            {/* Background Overlays */}
             <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                gap: 'clamp(30px, 6vw, 50px)',
-                padding: 'clamp(50px, 10vw, 80px) clamp(2rem, 6vw, 3.5rem)',
-                background: 'rgba(0,0,0,0.4)',
-                zIndex: 10
-            }}>
-                <FeatureCard 
-                    title="REAL-TIME MONITORING" 
-                    desc="Live heartbeat tracking of all organization assets." 
-                    delay="1.2s" 
-                />
-                <FeatureCard 
-                    title="THREAT DETECTION" 
-                    desc="Automated anomaly detection using advanced heuristics." 
-                    delay="1.4s" 
-                />
-                <FeatureCard 
-                    title="DATA ISOLATION" 
-                    desc="Strict multi-tenant architecture ensures data sovereignty." 
-                    delay="1.6s" 
-                />
-            </div>
-
-            {/* Animated background grid */}
-            <div style={{
-                position: 'absolute',
-                top: 0, left: 0, right: 0, bottom: 0,
-                backgroundImage: 'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
-                backgroundSize: '50px 50px',
-                opacity: 0.15,
                 pointerEvents: 'none',
-                transform: 'perspective(600px) rotateX(60deg) translateY(-50px) scale(1.8)',
-                animation: 'moveGrid 60s linear infinite',
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.25)', // Very transparent black to aid legibility
+                backdropFilter: 'blur(1px)', // Slight blur to help text pop
                 zIndex: 0
             }} />
+
+            {/* Scan Lines */}
+            <div className="scan-line" />
+            <div className="scan-line" style={{ animationDelay: '10s', boxShadow: '0 0 60px rgba(0,255,157,0.3)' }} />
+
+            {/* Content Container */}
+            <div style={{ position: 'relative', zIndex: 30, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+
+                {/* Navbar */}
+                <nav style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '2.5rem 2rem', /* px-8 py-10 */
+                    maxWidth: '1280px',
+                    margin: '0 auto',
+                    width: '100%'
+                }}>
+                    <div className="animate-glowPulse" style={{
+                        fontSize: 'clamp(1.2rem, 3vw, 2rem)',
+                        fontWeight: 900,
+                        letterSpacing: '0.05em',
+                        color: '#00ff9d',
+                        textShadow: '0 0 20px rgba(0,255,157,0.5)'
+                    }}>
+                        AEGIS LEGION
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button
+                            onClick={() => navigate('/login')}
+                            className="hover-scale"
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid #00ff9d',
+                                color: '#00ff9d',
+                                padding: '0.75rem 1.5rem',
+                                borderRadius: '0.5rem',
+                                fontWeight: 500,
+                                fontSize: '1rem',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            LOGIN
+                        </button>
+                        <button
+                            onClick={() => navigate('/register')}
+                            className="hover-scale"
+                            style={{
+                                background: '#00ff9d',
+                                border: 'none',
+                                color: 'black',
+                                padding: '0.75rem 1.5rem',
+                                borderRadius: '0.5rem',
+                                fontWeight: 700,
+                                fontSize: '1rem',
+                                cursor: 'pointer',
+                                boxShadow: '0 0 35px rgba(0,255,157,0.25)'
+                            }}
+                        >
+                            ACCESS TERMINAL
+                        </button>
+                    </div>
+                </nav>
+
+                {/* Hero Section */}
+                <main style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    padding: '0 2rem'
+                }}>
+                    <h1 className="animate-fadeInUp animate-glowPulse" style={{
+                        marginBottom: '1.5rem',
+                        fontSize: 'clamp(2rem, 6vw, 4.5rem)',
+                        textTransform: 'uppercase',
+                        fontWeight: 900,
+                        lineHeight: 1.1,
+                        textShadow: '0 0 30px rgba(0,255,157,0.6)'
+                    }}>
+                        Global Command <span style={{ color: '#00ff9d' }}>Center</span>
+                    </h1>
+
+                    <p className="animate-fadeInUp" style={{
+                        marginBottom: '2.5rem',
+                        maxWidth: '48rem',
+                        fontSize: 'clamp(1rem, 1.5vw, 1.25rem)',
+                        color: '#9ca3af', /* text-gray-400 */
+                        animationDelay: '0.3s',
+                        lineHeight: 1.6
+                    }}>
+                        Centralized threat detection and infrastructure monitoring for the modern enterprise.
+                        Secure your assets with military-grade surveillance and automated response protocols.
+                    </p>
+
+                    <div className="animate-fadeInUp" style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        gap: '2rem',
+                        animationDelay: '0.6s'
+                    }}>
+                        <button
+                            onClick={() => navigate('/register')}
+                            className="hover-scale"
+                            style={{
+                                background: '#00ff9d',
+                                color: 'black',
+                                padding: '1.25rem 3rem',
+                                fontSize: '1.25rem',
+                                fontWeight: 700,
+                                borderRadius: '0.5rem',
+                                border: 'none',
+                                cursor: 'pointer',
+                                boxShadow: '0 0 40px rgba(0,255,157,0.4)'
+                            }}
+                        >
+                            GET STARTED
+                        </button>
+                        <button
+                            onClick={() => navigate('/login')}
+                            className="hover-scale"
+                            style={{
+                                background: 'transparent',
+                                border: '2px solid #00ff9d',
+                                color: '#00ff9d',
+                                padding: '1.25rem 3rem',
+                                fontSize: '1.25rem',
+                                fontWeight: 700,
+                                borderRadius: '0.5rem',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            LIVE DEMO
+                        </button>
+                    </div>
+                </main>
+
+                {/* Features Section */}
+                <section className="animate-fadeInUp" style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: '3rem',
+                    padding: '5rem 2rem', /* py-20 px-8 */
+                    maxWidth: '1280px',
+                    margin: '0 auto',
+                    width: '100%',
+                    // background: 'rgba(0,0,0,0.4)', // Removed per user request
+                    animationDelay: '0.9s'
+                }}>
+                    {features.map((feature, i) => (
+                        <FeatureCard key={i} title={feature.title} desc={feature.desc} delay={1.2 + i * 0.2} floatDelay={i * 1.5} />
+                    ))}
+                </section>
+            </div>
         </div>
     );
 }
 
-function FeatureCard({ title, desc, delay }) {
+function FeatureCard({ title, desc, delay, floatDelay }) {
+    const [hover, setHover] = React.useState(false);
+
     return (
-        <div 
-            className="feature-card"
+        <div
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            className="animate-fadeInUp"
             style={{
-                border: '1px solid var(--border)',
-                padding: 'clamp(30px, 6vw, 40px)',
-                background: 'var(--card-bg)',
-                borderRadius: '16px',
+                borderRadius: '0.75rem',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: hover ? '#00ff9d' : 'rgba(0, 255, 157, 0.2)',
+                background: hover ? 'linear-gradient(180deg, rgba(0,255,157,0.05) 0%, rgba(0,0,0,0.6) 100%)' : 'rgba(0,0,0,0.5)',
                 backdropFilter: 'blur(4px)',
-                animation: `fadeInUp 1.2s cubic-bezier(0.4, 0, 0.2, 1) ${delay} both`
+                padding: '2.5rem',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: hover ? 'translateY(-1.5rem)' : 'none',
+                boxShadow: hover ? '0 20px 40px rgba(0,255,157,0.25)' : 'none',
+                animation: `fadeInUp 1.2s cubic-bezier(0.4, 0, 0.2, 1) ${delay}s both, float 6s ease-in-out infinite ${floatDelay}s`,
+                // Note: animationDelay logic is moved into the animation shorthand above to handle multiple animations
             }}
         >
             <div style={{
-                height: '5px',
-                width: 'clamp(50px, 10vw, 70px)',
-                background: 'var(--accent)',
-                borderRadius: '3px',
-                marginBottom: '30px',
-                boxShadow: '0 0 20px rgba(0, 255, 157, 0.6)'
+                marginBottom: '2rem',
+                height: '0.25rem',
+                width: '5rem',
+                borderRadius: '0.125rem',
+                backgroundColor: '#00ff9d',
+                boxShadow: '0 0 20px rgba(0,255,157,0.6)'
             }} />
-            <h3 style={{ 
-                color: 'var(--accent)', 
-                marginBottom: '15px', 
-                fontSize: 'clamp(1.4rem, 3.5vw, 1.8rem)',
-                letterSpacing: '1px'
+            <h3 className="animate-glowPulse" style={{
+                marginBottom: '1rem',
+                fontSize: '1.5rem', /* 2xl */
+                letterSpacing: '0.05em',
+                color: '#00ff9d',
+                fontWeight: 600
             }}>
                 {title}
             </h3>
-            <p style={{ 
-                color: 'var(--text-muted)', 
-                fontSize: 'clamp(0.95rem, 2vw, 1.1rem)', 
-                lineHeight: '1.6' 
+            <p style={{
+                fontSize: '1.125rem', /* lg */
+                color: '#9ca3af',
+                lineHeight: 1.6
             }}>
                 {desc}
             </p>

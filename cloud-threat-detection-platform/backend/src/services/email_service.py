@@ -25,10 +25,12 @@ class EmailService:
             return None
 
     @staticmethod
-    def send_welcome_email(to_email, username, organization, login_url="http://localhost:5173"):
+    def send_welcome_email(to_email, username, organization, login_url=None):
         """
         Sends a welcome email with an embedded dashboard preview image.
         """
+        if login_url is None:
+            login_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
         from email.mime.multipart import MIMEMultipart
         from email.mime.text import MIMEText
         from email.mime.image import MIMEImage

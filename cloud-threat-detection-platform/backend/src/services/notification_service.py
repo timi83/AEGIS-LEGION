@@ -37,8 +37,12 @@ def send_email_alert(subject: str, body: str, to: str):
         msg["From"] = env["EMAIL_FROM"]
         msg["To"] = to
 
-        server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
-        server.starttls()
+        if env["EMAIL_SMTP_PORT"] == 465:
+            server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+        else:
+            server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+            server.starttls()
+            
         server.login(env["EMAIL_FROM"], env["EMAIL_PASSWORD"])
         server.sendmail(env["EMAIL_FROM"], to, msg.as_string())
         server.quit()
@@ -61,8 +65,12 @@ def send_mime_message(msg, to_email):
         msg["From"] = env["EMAIL_FROM"]
         msg["To"] = to_email
 
-        server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
-        server.starttls()
+        if env["EMAIL_SMTP_PORT"] == 465:
+            server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+        else:
+            server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+            server.starttls()
+            
         server.login(env["EMAIL_FROM"], env["EMAIL_PASSWORD"])
         server.sendmail(env["EMAIL_FROM"], to_email, msg.as_string())
         server.quit()

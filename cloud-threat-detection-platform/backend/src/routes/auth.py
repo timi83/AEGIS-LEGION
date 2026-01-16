@@ -292,7 +292,7 @@ def update_organization(payload: OrganizationUpdate, current_user: User = Depend
     return {"message": f"Organization renamed from '{old_name}' to '{payload.name}' successfully."}
 
 @router.post("/generate-api-key")
-def generate_api_key(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def generate_api_key(background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # Only Admin can generate keys? Or anyone? Let's say anyone for their own agents.
     # If strict RBAC: if current_user.role != 'admin': raise ...
     
@@ -309,12 +309,16 @@ def generate_api_key(current_user: User = Depends(get_current_user), db: Session
     
     db.commit()
     
-    # Send Notification
+    # Send Notification (Background Task)
     try:
         from src.services.email_service import EmailService
         
         # 1. Confirm to User (Actor)
-        EmailService.send_api_key_confirmation(current_user.email, new_key[-4:])
+        background_tasks.add_task(
+            EmailService.send_api_key_confirmation,
+            to_email=current_user.email, 
+            key_suffix=new_key[-4:]
+        )
         
         # 2. Alert Admin (Isolation: Only admin of THIS org)
         # Fetch organization admin(s)
@@ -327,10 +331,15 @@ def generate_api_key(current_user: User = Depends(get_current_user), db: Session
         
         for admin in org_admins:
             if admin.email:
-                EmailService.send_api_key_admin_alert(admin.email, current_user.username, new_key[-4:])
+                background_tasks.add_task(
+                    EmailService.send_api_key_admin_alert,
+                    admin_email=admin.email, 
+                    actor_username=current_user.username, 
+                    key_suffix=new_key[-4:]
+                )
                 
     except Exception as e:
-        print(f"⚠️ Failed to send API key notification: {e}")
+        print(f"⚠️ Failed to queue API key notification: {e}")
         
     return {"api_key": new_key}
 

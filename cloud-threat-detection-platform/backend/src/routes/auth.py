@@ -410,10 +410,10 @@ def forgot_password(payload: EmailSchema, background_tasks: BackgroundTasks, db:
         # Don't reveal user existence
         return {"message": "If email exists (and is Admin), reset link sent."}
     
-    # Feature Restriction: admins only
-    if user.role != 'admin':
-        print(f"⚠️ Password recovery attempted for non-admin {user.email}. Ignoring.")
-        return {"message": "If email exists (and is Admin), reset link sent."}
+    # Feature Restriction: REMOVED (Allow all users to reset password)
+    # if user.role != 'admin':
+    #    print(f"⚠️ Password recovery attempted for non-admin {user.email}. Ignoring.")
+    #    return {"message": "If email exists (and is Admin), reset link sent."}
 
     # Generate Signed JWT Token (Short Expiry)
     reset_token = create_access_token(

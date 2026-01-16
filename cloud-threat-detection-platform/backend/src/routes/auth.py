@@ -64,6 +64,7 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
     Public registration for new Organizations.
     Creates the first user as 'admin' for the specified organization.
     """
+    print(f"🚀 DEBUG: Register endpoint HIT for email: {user.email}")
     # db_user = db.query(User).filter(User.username == user.username).first()
     # if db_user:
     #     raise HTTPException(status_code=400, detail="Username already registered")

@@ -27,7 +27,7 @@ def get_env_vars():
 def send_email_alert(subject: str, body: str, to: str):
     env = get_env_vars()
     if not env["EMAIL_FROM"] or not env["EMAIL_PASSWORD"]:
-        # print("⚠️ Email alerts disabled (missing credentials)") 
+        print("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.") 
         # Silencing spam logs for now
         return False
 
@@ -54,7 +54,7 @@ def send_mime_message(msg, to_email):
     """
     env = get_env_vars()
     if not env["EMAIL_FROM"] or not env["EMAIL_PASSWORD"]:
-        # print("⚠️ Email alerts disabled (missing credentials)")
+        print("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.")
         return False
 
     try:

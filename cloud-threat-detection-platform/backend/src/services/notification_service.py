@@ -173,6 +173,26 @@ def send_mime_message(msg, to_email):
 
     logger.info(f"Attempting valid SMTP send to: {to_email}")
 
+    # PRIORITY 1: Use Resend if available
+    if env["RESEND_API_KEY"]:
+        logger.info("Redirecting MIME message to Resend API...")
+        # Extract content from MIME message (Best Effort)
+        html_content = None
+        subject = msg["Subject"]
+        
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/html":
+                    html_content = part.get_payload(decode=True).decode()
+                    break
+        else:
+            html_content = msg.get_payload(decode=True).decode()
+            
+        if html_content:
+            return send_via_resend(env, to_email, subject, html_content)
+        else:
+            logger.warning("Could not extract HTML from MIME message for Resend. Falling back to SMTP.")
+
     # Debug: Print loaded config (masked)
     logger.info(f"SMTP Config: Server={env['EMAIL_SMTP_SERVER']}, Port={env['EMAIL_SMTP_PORT']}")
 

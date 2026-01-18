@@ -1,9 +1,13 @@
-# backend/src/services/notification_service.py
 
 import os
 import smtplib
+import logging
 from email.mime.text import MIMEText
 import requests
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 # -------------------------------------------------------------------
 # Load ENV variables
@@ -27,8 +31,7 @@ def get_env_vars():
 def send_email_alert(subject: str, body: str, to: str):
     env = get_env_vars()
     if not env["EMAIL_FROM"] or not env["EMAIL_PASSWORD"]:
-        print("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.") 
-        # Silencing spam logs for now
+        logger.warning("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.") 
         return False
 
     try:
@@ -37,6 +40,8 @@ def send_email_alert(subject: str, body: str, to: str):
         msg["From"] = env["EMAIL_FROM"]
         msg["To"] = to
 
+        logger.info(f"Attempting to connect to SMTP: {env['EMAIL_SMTP_SERVER']}:{env['EMAIL_SMTP_PORT']}")
+        
         if env["EMAIL_SMTP_PORT"] == 465:
             server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
         else:
@@ -44,12 +49,21 @@ def send_email_alert(subject: str, body: str, to: str):
             server.starttls()
             
         server.login(env["EMAIL_FROM"], env["EMAIL_PASSWORD"])
+        logger.info("SMTP Login Successful")
+        
         server.sendmail(env["EMAIL_FROM"], to, msg.as_string())
         server.quit()
 
-        print(f"📧 Email alert sent to {to}")
+        logger.info(f"📧 Email alert sent to {to}")
+        return True
+    except smtplib.SMTPAuthenticationError:
+        logger.error("❌ SMTP Authentication Failed. Check Username/Password.")
+        return False
+    except smtplib.SMTPConnectError:
+        logger.error("❌ SMTP Connection Failed. Check Server/Port.")
+        return False
     except Exception as e:
-        print("❌ Email alert error:", e)
+        logger.error(f"❌ Email alert error: {str(e)}", exc_info=True)
         return False
 
 def send_mime_message(msg, to_email):
@@ -58,12 +72,14 @@ def send_mime_message(msg, to_email):
     """
     env = get_env_vars()
     if not env["EMAIL_FROM"] or not env["EMAIL_PASSWORD"]:
-        print("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.")
+        logger.warning("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.")
         return False
 
     try:
         msg["From"] = env["EMAIL_FROM"]
         msg["To"] = to_email
+
+        logger.info(f"Attempting valid SMTP send to: {to_email}")
 
         if env["EMAIL_SMTP_PORT"] == 465:
             server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
@@ -75,11 +91,12 @@ def send_mime_message(msg, to_email):
         server.sendmail(env["EMAIL_FROM"], to_email, msg.as_string())
         server.quit()
 
-        print(f"📧 Email sent to {to_email}")
+        logger.info(f"📧 Email successfully sent to {to_email}")
         return True
     except Exception as e:
-        print("❌ SMTP Send Error:", e)
-        return False
+        logger.error(f"❌ SMTP Send Error: {str(e)}", exc_info=True)
+        raise e # Re-raise so Debug Endpoint can catch it
+        # Note: If called from BackgroundTask, this will be logged by FastAPI but won't crash app.
 
 
 # -------------------------------------------------------------------
@@ -89,14 +106,14 @@ def send_mime_message(msg, to_email):
 def send_slack_alert(message: str):
     env = get_env_vars()
     if not env["SLACK_WEBHOOK_URL"]:
-        # print("⚠️ Slack alerts disabled (no webhook)")
+        # logger.debug("⚠️ Slack alerts disabled (no webhook)")
         return False
 
     try:
         requests.post(env["SLACK_WEBHOOK_URL"], json={"text": message})
-        print("💬 Slack alert sent")
+        logger.info("💬 Slack alert sent")
         return True
     except Exception as e:
-        print("❌ Slack alert error:", e)
+        logger.error(f"❌ Slack alert error: {e}")
         return False
 

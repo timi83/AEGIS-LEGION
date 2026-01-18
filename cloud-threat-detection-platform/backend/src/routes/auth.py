@@ -437,6 +437,7 @@ def forgot_password(payload: EmailSchema, background_tasks: BackgroundTasks, db:
 
     return {"message": "If email exists (and is Admin), reset link sent."}
 
+
 @router.post("/reset-password")
 def reset_password(payload: ResetPasswordSchema, db: Session = Depends(get_db)):
     # Verify Signed JWT
@@ -459,3 +460,47 @@ def reset_password(payload: ResetPasswordSchema, db: Session = Depends(get_db)):
     db.commit()
     
     return {"message": "Password updated successfully"}
+
+# -------------------------------------------------------------------
+# DEBUG EMAIL ENDPOINT (Admin Only)
+# -------------------------------------------------------------------
+
+class DebugEmailRequest(BaseModel):
+    email: str
+
+@router.post("/debug/send-test-email", dependencies=[Depends(admin_only)])
+def debug_send_test_email(payload: DebugEmailRequest, current_user: User = Depends(get_current_user)):
+    """
+    Debug Endpoint to test email sending synchronously.
+    Returns detailed error message if it fails.
+    """
+    try:
+        from src.services.email_service import EmailService
+        
+        print(f"📧 DEBUG: Attempting to send test email to {payload.email}")
+        
+        # We use send_welcome_email as specific test case
+        # It calls notification_service.send_mime_message which we modified to re-raise exceptions
+        # if we add a flag, but currently it returns True/False.
+        # Wait, I didn't modify EmailService to re-raise, I modified notification_service.
+        # Let's check if EmailService catches it. 
+        # EmailService catches and prints. I should probably use notification_service directly here for raw error.
+        
+        from src.services.notification_service import send_email_alert
+        
+        # Test basic alert first (simpler path)
+        success = send_email_alert(
+            subject="DEBUG: Test Email from Backend",
+            body="<h1>It Works!</h1><p>If you see this, SMTP is configured correctly.</p>",
+            to=payload.email
+        )
+        
+        if success:
+            return {"message": "Email sent successfully! Check inbox."}
+        else:
+            raise HTTPException(status_code=500, detail="EmailService returned False. Check logs for SMTP error.")
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Email Failure: {str(e)}")

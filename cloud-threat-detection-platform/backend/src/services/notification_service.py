@@ -20,17 +20,61 @@ def get_env_vars():
         "EMAIL_PASSWORD": os.getenv("ALERT_EMAIL_PASSWORD"),
         "EMAIL_SMTP_SERVER": os.getenv("ALERT_EMAIL_SMTP", "smtp.gmail.com"),
         "EMAIL_SMTP_PORT": int(os.getenv("ALERT_EMAIL_PORT", 587)),
+
         "SLACK_WEBHOOK_URL": os.getenv("SLACK_WEBHOOK_URL"),
         "TELEGRAM_BOT_TOKEN": os.getenv("TELEGRAM_BOT_TOKEN"),
         "TELEGRAM_CHAT_ID": os.getenv("TELEGRAM_CHAT_ID"),
+        # Resend API Key (Professional Solution)
+        "RESEND_API_KEY": os.getenv("RESEND_API_KEY") 
     }
 
 # -------------------------------------------------------------------
 # EMAIL ALERT
 # -------------------------------------------------------------------
 
+def send_via_resend(env, to, subject, html_content):
+    """
+    Sends email via Resend API (HTTP 443) - Bypasses SMTP port blocks.
+    """
+    logger.info(f"🚀 Sending via Resend API to {to}...")
+    
+    url = "https://api.resend.com/emails"
+    headers = {
+        "Authorization": f"Bearer {env['RESEND_API_KEY']}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "from": "CTDIRP Platform <onboarding@resend.dev>", # Default Test Sender
+        "to": [to],
+        "subject": subject,
+        "html": html_content
+    }
+    
+    # If user provided a custom domain in FROM, try to use it
+    if env["EMAIL_FROM"] and "gmail" not in env["EMAIL_FROM"]:
+         payload["from"] = env["EMAIL_FROM"]
+
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=10)
+        if resp.status_code in [200, 201]:
+            logger.info(f"✅ Resend Success: {resp.json().get('id')}")
+            return True
+        else:
+            logger.error(f"❌ Resend Failed ({resp.status_code}): {resp.text}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Resend Connection Error: {e}")
+        return False
+
 def send_email_alert(subject: str, body: str, to: str):
     env = get_env_vars()
+    
+    # PRIORITY 1: Use Resend if available (Robust HTTP)
+    if env["RESEND_API_KEY"]:
+        return send_via_resend(env, to, subject, body)
+
+    # PRIORITY 2: Fallback to SMTP
     if not env["EMAIL_FROM"] or not env["EMAIL_PASSWORD"]:
         logger.warning("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.") 
         return False

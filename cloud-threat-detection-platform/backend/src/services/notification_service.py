@@ -4,6 +4,7 @@ import smtplib
 import logging
 from email.mime.text import MIMEText
 import requests
+import socket
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -34,14 +35,31 @@ def send_email_alert(subject: str, body: str, to: str):
         logger.warning("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.") 
         return False
 
-    try:
-        msg = MIMEText(body, "html")
-        msg["Subject"] = subject
-        msg["From"] = env["EMAIL_FROM"]
-        msg["To"] = to
+    msg = MIMEText(body, "html")
+    msg["Subject"] = subject
+    msg["From"] = env["EMAIL_FROM"]
+    msg["To"] = to
 
-        logger.info(f"Attempting to connect to SMTP: {env['EMAIL_SMTP_SERVER']}:{env['EMAIL_SMTP_PORT']}")
+    logger.info(f"Attempting valid SMTP send to: {to}")
+
+    # Debug: Print loaded config (masked)
+    logger.info(f"SMTP Config: Server={env['EMAIL_SMTP_SERVER']}, Port={env['EMAIL_SMTP_PORT']}")
+    
+    # NETWORK PROBE
+    try:
+        ip = socket.gethostbyname(env['EMAIL_SMTP_SERVER'])
+        logger.info(f"🔍 DNS Probe: {env['EMAIL_SMTP_SERVER']} -> {ip}")
+    except Exception as e:
+        logger.error(f"❌ DNS Probe Failed: {e}")
         
+    try:
+        # Check external connectivity
+        requests.get("https://www.google.com", timeout=2)
+        logger.info("🔍 HTTP Probe: google.com reachable")
+    except Exception as e:
+        logger.error(f"❌ HTTP Probe Failed (No Internet?): {e}")
+
+    try: 
         if env["EMAIL_SMTP_PORT"] == 465:
             server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"], timeout=10)
         else:

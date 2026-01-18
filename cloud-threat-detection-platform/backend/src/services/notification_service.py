@@ -47,10 +47,22 @@ def send_email_alert(subject: str, body: str, to: str):
     
     # NETWORK PROBE
     try:
-        ip = socket.gethostbyname(env['EMAIL_SMTP_SERVER'])
-        logger.info(f"🔍 DNS Probe: {env['EMAIL_SMTP_SERVER']} -> {ip}")
+        # Resolve to IPv4 specifically
+        target_ip = socket.gethostbyname(env['EMAIL_SMTP_SERVER'])
+        logger.info(f"🔍 DNS Probe: {env['EMAIL_SMTP_SERVER']} -> {target_ip} (IPv4)")
     except Exception as e:
         logger.error(f"❌ DNS Probe Failed: {e}")
+        target_ip = None
+
+    try:
+        # Probe Port 587 directly using IPv4 if available
+        probe_host = target_ip if target_ip else env['EMAIL_SMTP_SERVER']
+        logger.info(f"🔍 Probing Port 587 on {probe_host}...")
+        sock = socket.create_connection((probe_host, 587), timeout=5)
+        sock.close()
+        logger.info("✅ Port 587 Probe: Success (Port is OPEN)")
+    except Exception as e:
+        logger.error(f"❌ Port 587 Probe Failed: {e} (Port might be BLOCKED)")
         
     try:
         # Check external connectivity
@@ -60,10 +72,28 @@ def send_email_alert(subject: str, body: str, to: str):
         logger.error(f"❌ HTTP Probe Failed (No Internet?): {e}")
 
     try: 
+        # FORCE IPv4 CONNECTION (Bypass potential IPv6 routing issues)
+        connect_host = target_ip if target_ip else env["EMAIL_SMTP_SERVER"]
+        
         if env["EMAIL_SMTP_PORT"] == 465:
-            server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"], timeout=10)
+            # SSL Mode
+            # Note: server_hostname argument is needed if we connect by IP to verify cert
+            import ssl
+            context = ssl.create_default_context()
+            server = smtplib.SMTP_SSL(connect_host, env["EMAIL_SMTP_PORT"], timeout=10, context=context)
+            # Fix hostname for checks if we used IP
+            if target_ip:
+                server._host = env["EMAIL_SMTP_SERVER"]
         else:
-            server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"], timeout=10)
+            # TLS Mode (587)
+            server = smtplib.SMTP(connect_host, env["EMAIL_SMTP_PORT"], timeout=10)
+            
+            # HACK: If we connected via IP, we must restore the hostname BEFORE starttls
+            # so that ssl.wrap_socket uses the correct server_hostname for SNI/Cert validation.
+            if target_ip:
+                logger.info(f"Connected to {target_ip}. Restoring hostname {env['EMAIL_SMTP_SERVER']} for TLS...")
+                server._host = env["EMAIL_SMTP_SERVER"]
+            
             logger.info("Sending STARTTLS command...")
             server.starttls()
             

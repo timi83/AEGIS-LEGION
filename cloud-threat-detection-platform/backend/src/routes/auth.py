@@ -192,16 +192,29 @@ def delete_user(user_id: int, current_user: User = Depends(get_current_user), db
     
     # Manual Cascade Delete to avoid FK errors
     from src.models.incident import Incident
-    from src.models.rule import Rule
     from src.models.audit_log import AuditLog
+    # We use raw SQL for dependencies to avoid circular imports or missing models
+    from sqlalchemy import text
+
+    # 1. Delete Dependencies of User's Incidents (Notes & Assignments)
+    # We delete assignments/notes where the PARENT incident belongs to this user.
+    db.execute(text("""
+        DELETE FROM incident_assignments 
+        WHERE incident_id IN (SELECT id FROM incidents WHERE user_id = :uid)
+    """), {"uid": user_id})
     
-    # Delete Incidents
+    db.execute(text("""
+        DELETE FROM incident_notes 
+        WHERE incident_id IN (SELECT id FROM incidents WHERE user_id = :uid)
+    """), {"uid": user_id})
+
+    # 2. Delete Incidents owned by User
     db.query(Incident).filter(Incident.user_id == user_id).delete()
     
-    # Rules do not have user_id, skipping.
+    # 3. Delete Server Assignments (User <-> Server)
+    db.execute(text("DELETE FROM server_assignments WHERE user_id = :uid"), {"uid": user_id})
     
-    # Delete Audit Logs (Caution: Usually we keep these, but if user deletes, FK requires nullify or delete)
-    # We will delete them for now to allow user deletion. Ideally we should set user_id=None.
+    # 4. Delete Audit Logs
     db.query(AuditLog).filter(AuditLog.user_id == user_id).delete()
     
     db.delete(user_to_delete)

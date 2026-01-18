@@ -43,9 +43,9 @@ def send_email_alert(subject: str, body: str, to: str):
         logger.info(f"Attempting to connect to SMTP: {env['EMAIL_SMTP_SERVER']}:{env['EMAIL_SMTP_PORT']}")
         
         if env["EMAIL_SMTP_PORT"] == 465:
-            server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+            server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"], timeout=10)
         else:
-            server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+            server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"], timeout=10)
             logger.info("Sending STARTTLS command...")
             server.starttls()
             
@@ -76,16 +76,19 @@ def send_mime_message(msg, to_email):
         logger.warning("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.")
         return False
 
-    try:
-        msg["From"] = env["EMAIL_FROM"]
-        msg["To"] = to_email
+    msg["From"] = env["EMAIL_FROM"]
+    msg["To"] = to_email
 
-        logger.info(f"Attempting valid SMTP send to: {to_email}")
+    logger.info(f"Attempting valid SMTP send to: {to_email}")
 
+    # Debug: Print loaded config (masked)
+    logger.info(f"SMTP Config: Server={env['EMAIL_SMTP_SERVER']}, Port={env['EMAIL_SMTP_PORT']}")
+
+    try: 
         if env["EMAIL_SMTP_PORT"] == 465:
-            server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+            server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"], timeout=10)
         else:
-            server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+            server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"], timeout=10)
             logger.info("Sending STARTTLS command...")
             server.starttls()
             

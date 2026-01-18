@@ -46,6 +46,7 @@ def send_email_alert(subject: str, body: str, to: str):
             server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
         else:
             server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+            logger.info("Sending STARTTLS command...")
             server.starttls()
             
         server.login(env["EMAIL_FROM"], env["EMAIL_PASSWORD"])
@@ -85,6 +86,7 @@ def send_mime_message(msg, to_email):
             server = smtplib.SMTP_SSL(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
         else:
             server = smtplib.SMTP(env["EMAIL_SMTP_SERVER"], env["EMAIL_SMTP_PORT"])
+            logger.info("Sending STARTTLS command...")
             server.starttls()
             
         server.login(env["EMAIL_FROM"], env["EMAIL_PASSWORD"])

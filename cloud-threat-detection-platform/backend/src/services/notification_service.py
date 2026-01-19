@@ -24,54 +24,89 @@ def get_env_vars():
         "SLACK_WEBHOOK_URL": os.getenv("SLACK_WEBHOOK_URL"),
         "TELEGRAM_BOT_TOKEN": os.getenv("TELEGRAM_BOT_TOKEN"),
         "TELEGRAM_CHAT_ID": os.getenv("TELEGRAM_CHAT_ID"),
-        # Brevo API Key (Sender for ANY recipient)
-        "BREVO_API_KEY": os.getenv("BREVO_API_KEY") 
+        # SendPulse API Credentials
+        "SENDPULSE_ID": os.getenv("SENDPULSE_ID"),
+        "SENDPULSE_SECRET": os.getenv("SENDPULSE_SECRET")
     }
 
 # -------------------------------------------------------------------
 # EMAIL ALERT
 # -------------------------------------------------------------------
 
-def send_via_brevo(env, to, subject, html_content):
+import base64
+
+def get_sendpulse_token(user_id, secret):
     """
-    Sends email via Brevo API (HTTP 443) - Bypasses SMTP port blocks.
-    Allows sending to ANY recipient on Free Tier (300/day limit).
+    Fetches a temporary bearer token from SendPulse (OAuth2).
     """
-    logger.info(f"🚀 Sending via Brevo API to {to}...")
-    
-    url = "https://api.brevo.com/v3/smtp/email"
-    headers = {
-        "api-key": env['BREVO_API_KEY'], # Header is 'api-key', not Authorization
-        "Content-Type": "application/json",
-        "Accept": "application/json"
+    url = "https://api.sendpulse.com/oauth/access_token"
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": user_id,
+        "client_secret": secret
     }
+    try:
+        resp = requests.post(url, json=data, timeout=5)
+        if resp.status_code == 200:
+            return resp.json().get("access_token")
+        logger.error(f"❌ SendPulse Token Error ({resp.status_code}): {resp.text}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ SendPulse Auth Exception: {e}")
+        return None
+
+def send_via_sendpulse(env, to, subject, html_content):
+    """
+    Sends email via SendPulse API (HTTP 443).
+    Requires 'html' body to be Base64 encoded.
+    """
+    logger.info(f"🚀 Sending via SendPulse API to {to}...")
     
-    # Brevo Payload Format
+    # 1. Authenticate
+    token = get_sendpulse_token(env["SENDPULSE_ID"], env["SENDPULSE_SECRET"])
+    if not token:
+        return False
+        
+    # 2. Prepare Request
+    url = "https://api.sendpulse.com/smtp/emails"
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # SendPulse requires Base64 encoded HTML
+    html_b64 = base64.b64encode(html_content.encode("utf-8")).decode("utf-8")
+    
     payload = {
-        "sender": {"email": env["EMAIL_FROM"] if env["EMAIL_FROM"] else "admin@example.com", "name": "CTDIRP Platform"},
-        "to": [{"email": to}],
-        "subject": subject,
-        "htmlContent": html_content
+        "email": {
+            "subject": subject,
+            "html": html_b64,
+            "from": {"name": "CTDIRP Platform", "email": env["EMAIL_FROM"] if env["EMAIL_FROM"] else "admin@example.com"},
+            "to": [{"email": to}]
+        }
     }
 
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=10)
-        if resp.status_code in [200, 201]:
-            logger.info(f"✅ Brevo Success: {resp.json().get('messageId')}")
-            return True
+        # SendPulse returns 200 even for some errors, check 'result': true
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("result"):
+                logger.info(f"✅ SendPulse Success: {data.get('id')}")
+                return True
+            else:
+                logger.error(f"❌ SendPulse API Error: {data}")
+                return False
         else:
-            logger.error(f"❌ Brevo Failed ({resp.status_code}): {resp.text}")
+            logger.error(f"❌ SendPulse Failed ({resp.status_code}): {resp.text}")
             return False
     except Exception as e:
-        logger.error(f"❌ Brevo Connection Error: {e}")
+        logger.error(f"❌ SendPulse Connection Error: {e}")
         return False
 
 def send_email_alert(subject: str, body: str, to: str):
     env = get_env_vars()
     
-    # PRIORITY 1: Use Brevo if available (Robust HTTP + Multi-recipient)
-    if env["BREVO_API_KEY"]:
-        return send_via_brevo(env, to, subject, body)
+    # PRIORITY 1: Use SendPulse if available
+    if env["SENDPULSE_ID"] and env["SENDPULSE_SECRET"]:
+        return send_via_sendpulse(env, to, subject, body)
 
     # PRIORITY 2: Fallback to SMTP
     if not env["EMAIL_FROM"] or not env["EMAIL_PASSWORD"]:
@@ -172,9 +207,9 @@ def send_mime_message(msg, to_email):
 
     logger.info(f"Attempting valid SMTP send to: {to_email}")
 
-    # PRIORITY 1: Use Brevo if available
-    if env["BREVO_API_KEY"]:
-        logger.info("Redirecting MIME message to Brevo API...")
+    # PRIORITY 1: Use SendPulse if available
+    if env["SENDPULSE_ID"] and env["SENDPULSE_SECRET"]:
+        logger.info("Redirecting MIME message to SendPulse API...")
         # Extract content from MIME message (Best Effort)
         html_content = None
         subject = msg["Subject"]
@@ -188,9 +223,9 @@ def send_mime_message(msg, to_email):
             html_content = msg.get_payload(decode=True).decode()
             
         if html_content:
-            return send_via_brevo(env, to_email, subject, html_content)
+            return send_via_sendpulse(env, to_email, subject, html_content)
         else:
-            logger.warning("Could not extract HTML from MIME message for Brevo. Falling back to SMTP.")
+            logger.warning("Could not extract HTML from MIME message for SendPulse. Falling back to SMTP.")
 
     # Debug: Print loaded config (masked)
     logger.info(f"SMTP Config: Server={env['EMAIL_SMTP_SERVER']}, Port={env['EMAIL_SMTP_PORT']}")

@@ -24,55 +24,54 @@ def get_env_vars():
         "SLACK_WEBHOOK_URL": os.getenv("SLACK_WEBHOOK_URL"),
         "TELEGRAM_BOT_TOKEN": os.getenv("TELEGRAM_BOT_TOKEN"),
         "TELEGRAM_CHAT_ID": os.getenv("TELEGRAM_CHAT_ID"),
-        # Resend API Key (Professional Solution)
-        "RESEND_API_KEY": os.getenv("RESEND_API_KEY") 
+        # Brevo API Key (Sender for ANY recipient)
+        "BREVO_API_KEY": os.getenv("BREVO_API_KEY") 
     }
 
 # -------------------------------------------------------------------
 # EMAIL ALERT
 # -------------------------------------------------------------------
 
-def send_via_resend(env, to, subject, html_content):
+def send_via_brevo(env, to, subject, html_content):
     """
-    Sends email via Resend API (HTTP 443) - Bypasses SMTP port blocks.
+    Sends email via Brevo API (HTTP 443) - Bypasses SMTP port blocks.
+    Allows sending to ANY recipient on Free Tier (300/day limit).
     """
-    logger.info(f"🚀 Sending via Resend API to {to}...")
+    logger.info(f"🚀 Sending via Brevo API to {to}...")
     
-    url = "https://api.resend.com/emails"
+    url = "https://api.brevo.com/v3/smtp/email"
     headers = {
-        "Authorization": f"Bearer {env['RESEND_API_KEY']}",
-        "Content-Type": "application/json"
+        "api-key": env['BREVO_API_KEY'], # Header is 'api-key', not Authorization
+        "Content-Type": "application/json",
+        "Accept": "application/json"
     }
     
+    # Brevo Payload Format
     payload = {
-        "from": "CTDIRP Platform <onboarding@resend.dev>", # Default Test Sender
-        "to": [to],
+        "sender": {"email": env["EMAIL_FROM"] if env["EMAIL_FROM"] else "admin@example.com", "name": "CTDIRP Platform"},
+        "to": [{"email": to}],
         "subject": subject,
-        "html": html_content
+        "htmlContent": html_content
     }
-    
-    # If user provided a custom domain in FROM, try to use it
-    if env["EMAIL_FROM"] and "gmail" not in env["EMAIL_FROM"]:
-         payload["from"] = env["EMAIL_FROM"]
 
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=10)
         if resp.status_code in [200, 201]:
-            logger.info(f"✅ Resend Success: {resp.json().get('id')}")
+            logger.info(f"✅ Brevo Success: {resp.json().get('messageId')}")
             return True
         else:
-            logger.error(f"❌ Resend Failed ({resp.status_code}): {resp.text}")
+            logger.error(f"❌ Brevo Failed ({resp.status_code}): {resp.text}")
             return False
     except Exception as e:
-        logger.error(f"❌ Resend Connection Error: {e}")
+        logger.error(f"❌ Brevo Connection Error: {e}")
         return False
 
 def send_email_alert(subject: str, body: str, to: str):
     env = get_env_vars()
     
-    # PRIORITY 1: Use Resend if available (Robust HTTP)
-    if env["RESEND_API_KEY"]:
-        return send_via_resend(env, to, subject, body)
+    # PRIORITY 1: Use Brevo if available (Robust HTTP + Multi-recipient)
+    if env["BREVO_API_KEY"]:
+        return send_via_brevo(env, to, subject, body)
 
     # PRIORITY 2: Fallback to SMTP
     if not env["EMAIL_FROM"] or not env["EMAIL_PASSWORD"]:
@@ -173,9 +172,9 @@ def send_mime_message(msg, to_email):
 
     logger.info(f"Attempting valid SMTP send to: {to_email}")
 
-    # PRIORITY 1: Use Resend if available
-    if env["RESEND_API_KEY"]:
-        logger.info("Redirecting MIME message to Resend API...")
+    # PRIORITY 1: Use Brevo if available
+    if env["BREVO_API_KEY"]:
+        logger.info("Redirecting MIME message to Brevo API...")
         # Extract content from MIME message (Best Effort)
         html_content = None
         subject = msg["Subject"]
@@ -189,9 +188,9 @@ def send_mime_message(msg, to_email):
             html_content = msg.get_payload(decode=True).decode()
             
         if html_content:
-            return send_via_resend(env, to_email, subject, html_content)
+            return send_via_brevo(env, to_email, subject, html_content)
         else:
-            logger.warning("Could not extract HTML from MIME message for Resend. Falling back to SMTP.")
+            logger.warning("Could not extract HTML from MIME message for Brevo. Falling back to SMTP.")
 
     # Debug: Print loaded config (masked)
     logger.info(f"SMTP Config: Server={env['EMAIL_SMTP_SERVER']}, Port={env['EMAIL_SMTP_PORT']}")

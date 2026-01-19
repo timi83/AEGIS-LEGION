@@ -226,7 +226,11 @@ def delete_user(user_id: int, current_user: User = Depends(get_current_user), db
         # 5. AUDIT LOGS
         db.query(AuditLog).filter(AuditLog.user_id == user_id).delete()
         
-        # 6. DELETE USER
+        # 6. NOTIFICATIONS (Fix for NotNullViolation)
+        # Notifications belong to the user, so we must delete them.
+        db.execute(text("DELETE FROM notifications WHERE user_id = :uid"), {"uid": user_id})
+
+        # 7. DELETE USER
         db.delete(user_to_delete)
         db.commit()
 

@@ -196,29 +196,47 @@ def delete_user(user_id: int, current_user: User = Depends(get_current_user), db
     # We use raw SQL for dependencies to avoid circular imports or missing models
     from sqlalchemy import text
 
-    # 1. Delete Dependencies of User's Incidents (Notes & Assignments)
-    # We delete assignments/notes where the PARENT incident belongs to this user.
-    db.execute(text("""
-        DELETE FROM incident_assignments 
-        WHERE incident_id IN (SELECT id FROM incidents WHERE user_id = :uid)
-    """), {"uid": user_id})
-    
-    db.execute(text("""
-        DELETE FROM incident_notes 
-        WHERE incident_id IN (SELECT id FROM incidents WHERE user_id = :uid)
-    """), {"uid": user_id})
+    try:
+        # 1. INCIDENT ASSIGNMENTS
+        # A. Delete assignments for incidents OWNED by this user (because we will delete those incidents)
+        db.execute(text("""
+            DELETE FROM incident_assignments 
+            WHERE incident_id IN (SELECT id FROM incidents WHERE user_id = :uid)
+        """), {"uid": user_id})
+        
+        # B. Delete assignments WHERE this user is the assignee (on ANY incident)
+        db.execute(text("DELETE FROM incident_assignments WHERE user_id = :uid"), {"uid": user_id})
 
-    # 2. Delete Incidents owned by User
-    db.query(Incident).filter(Incident.user_id == user_id).delete()
-    
-    # 3. Delete Server Assignments (User <-> Server)
-    db.execute(text("DELETE FROM server_assignments WHERE user_id = :uid"), {"uid": user_id})
-    
-    # 4. Delete Audit Logs
-    db.query(AuditLog).filter(AuditLog.user_id == user_id).delete()
-    
-    db.delete(user_to_delete)
-    db.commit()
+        # 2. INCIDENT NOTES
+        # A. Delete notes LINKED to incidents owned by this user
+        db.execute(text("""
+            DELETE FROM incident_notes 
+            WHERE incident_id IN (SELECT id FROM incidents WHERE user_id = :uid)
+        """), {"uid": user_id})
+        
+        # B. Delete notes AUTHORED by this user (on ANY incident)
+        db.execute(text("DELETE FROM incident_notes WHERE user_id = :uid"), {"uid": user_id})
+
+        # 3. INCIDENTS (Parent)
+        db.query(Incident).filter(Incident.user_id == user_id).delete()
+        
+        # 4. SERVER ASSIGNMENTS
+        db.execute(text("DELETE FROM server_assignments WHERE user_id = :uid"), {"uid": user_id})
+        
+        # 5. AUDIT LOGS
+        db.query(AuditLog).filter(AuditLog.user_id == user_id).delete()
+        
+        # 6. DELETE USER
+        db.delete(user_to_delete)
+        db.commit()
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+        # Return 500 but with detail so user sees it in network tab if header allows, or logs at least
+        print(f"❌ DELETE USER FAILED: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
     
     return {"message": f"User {user_to_delete.username} deleted."}
 

@@ -21,10 +21,12 @@ TRAINING_BUFFER_SIZE = 100
 ANOMALY_THRESHOLD = -0.6
 
 class AnomalyDetector:
-    def __init__(self, organization_id: int | str = "global"):
+    def __init__(self, organization_id: int | str = "global", source: str = "unknown"):
         self.organization_id = organization_id
-        # Unique model path per organization
-        self.model_path = os.path.join(MODEL_DIR, f"model_org_{organization_id}.pkl")
+        self.source = source
+        # Unique model path per organization AND source
+        safe_source = "".join(c if c.isalnum() else "_" for c in source)
+        self.model_path = os.path.join(MODEL_DIR, f"model_org_{organization_id}_src_{safe_source}.pkl")
         
         self.model = None
         self.buffer = deque(maxlen=TRAINING_BUFFER_SIZE)
@@ -37,16 +39,16 @@ class AnomalyDetector:
                 self.model = joblib.load(self.model_path)
                 self.is_trained = True
                 self.training_mode = False
-                logger.info(f"🧠 Loaded existing ML model for Org {organization_id}.")
+                logger.info(f"🧠 Loaded existing ML model for Org {organization_id} (Server: {source}).")
             except Exception as e:
-                logger.error(f"Failed to load model for Org {organization_id}: {e}")
+                logger.error(f"Failed to load model for Org {organization_id} (Server: {source}): {e}")
 
     def train(self):
         """Train the Isolation Forest model on buffered data."""
         if len(self.buffer) < TRAINING_BUFFER_SIZE:
             return
 
-        logger.info(f"🧠 Training model for Org {self.organization_id} on {len(self.buffer)} events...")
+        logger.info(f"🧠 Training model for Org {self.organization_id} (Server: {self.source}) on {len(self.buffer)} events...")
         try:
             X = np.array(self.buffer)
             self.model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
@@ -57,10 +59,10 @@ class AnomalyDetector:
             
             # Save model
             joblib.dump(self.model, self.model_path)
-            logger.info(f"✅ Model trained and saved for Org {self.organization_id}!")
+            logger.info(f"✅ Model trained and saved for Org {self.organization_id} (Server: {self.source})!")
             
         except Exception as e:
-            logger.error(f"Training failed for Org {self.organization_id}: {e}")
+            logger.error(f"Training failed for Org {self.organization_id} (Server: {self.source}): {e}")
 
     def get_status(self) -> dict:
         """Returns the current status of the ML model."""
@@ -70,7 +72,8 @@ class AnomalyDetector:
             "required_samples": TRAINING_BUFFER_SIZE,
             "progress": int((len(self.buffer) / TRAINING_BUFFER_SIZE) * 100) if self.training_mode else 100,
             "trained": self.is_trained,
-            "organization_id": self.organization_id
+            "organization_id": self.organization_id,
+            "source": self.source
         }
 
     def reset(self):
@@ -82,10 +85,10 @@ class AnomalyDetector:
         if os.path.exists(self.model_path):
             try:
                 os.remove(self.model_path)
-                logger.info(f"🗑️ Deleted ML model file for Org {self.organization_id}.")
+                logger.info(f"🗑️ Deleted ML model file for Org {self.organization_id} (Server: {self.source}).")
             except Exception as e:
                 logger.error(f"Failed to delete model file: {e}")
-        logger.info("🔄 ML Model Reset to Training Mode.")
+        logger.info(f"🔄 ML Model for {self.source} Reset to Training Mode.")
 
     def process_event(self, event: dict) -> dict | None:
         """
@@ -114,7 +117,7 @@ class AnomalyDetector:
             self.buffer.append(features)
             remaining = TRAINING_BUFFER_SIZE - len(self.buffer)
             if remaining % 10 == 0:
-                logger.info(f"🧠 Org {self.organization_id} Learning... {len(self.buffer)}/{TRAINING_BUFFER_SIZE} samples collected.")
+                logger.info(f"🧠 Org {self.organization_id} ({self.source}) Learning... {len(self.buffer)}/{TRAINING_BUFFER_SIZE} samples.")
             
             if len(self.buffer) >= TRAINING_BUFFER_SIZE:
                 self.train()
@@ -129,7 +132,7 @@ class AnomalyDetector:
                 score = self.model.score_samples(X)[0]
 
                 if pred == -1:
-                    logger.warning(f"🚨 Org {self.organization_id} Anomaly Detected! Score: {score:.2f} | Data: {features}")
+                    logger.warning(f"🚨 Org {self.organization_id} ({self.source}) Anomaly Detected! Score: {score:.2f} | Data: {features}")
                     return {
                         "score": float(score),
                         "reason": f"Anomaly Detected (Score: {score:.2f})",
@@ -139,7 +142,7 @@ class AnomalyDetector:
                         }
                     }
             except Exception as e:
-                logger.error(f"Inference error Org {self.organization_id} (Model Mismatch? Resetting...): {e}")
+                logger.error(f"Inference error Org {self.organization_id} ({self.source}) (Model Mismatch? Resetting...): {e}")
                 self.reset() # Auto-reset if shape mismatch occurs
 
         return None
@@ -149,15 +152,16 @@ class AnomalyDetector:
 # -------------------------------------------------------------------
 class OrganizationMLManager:
     def __init__(self):
-        self.detectors = {} # { org_id: AnomalyDetector }
+        self.detectors = {} # { "org_id:source": AnomalyDetector }
 
-    def get_detector(self, organization_id: int | str | None) -> AnomalyDetector:
-        # Fallback to "global" if no org ID provided (legacy support)
-        key = organization_id if organization_id is not None else "global"
+    def get_detector(self, organization_id: int | str | None, source: str) -> AnomalyDetector:
+        org_key = str(organization_id) if organization_id is not None else "global"
+        safe_source = str(source) if source else "unknown"
+        key = f"{org_key}:{safe_source}"
         
         if key not in self.detectors:
-            logger.info(f"🆕 Initializing new AnomalyDetector for Org: {key}")
-            self.detectors[key] = AnomalyDetector(organization_id=key)
+            logger.info(f"🆕 Initializing new AnomalyDetector for Org: {org_key}, Server: {safe_source}")
+            self.detectors[key] = AnomalyDetector(organization_id=org_key, source=safe_source)
         
         return self.detectors[key]
 
@@ -169,6 +173,7 @@ def detect_anomaly(event: dict, organization_id: int | str | None = None) -> dic
     if organization_id is None:
         organization_id = event.get("organization_id")
         
-    detector = manager.get_detector(organization_id)
+    source = event.get("source", "unknown")
+    detector = manager.get_detector(organization_id, source)
     return detector.process_event(event)
 

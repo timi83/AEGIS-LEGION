@@ -11,7 +11,7 @@ import socket
 import logging
 
 # Configuration
-API_URL = "http://127.0.0.1:8001/api"
+API_URL = os.getenv("AGENT_API_URL", "https://aegis-legion.onrender.com/api")
 import os
 
 # ---------------------------------------------------------
@@ -87,36 +87,68 @@ def heartbeat_loop():
                 
                 disk_io = psutil.disk_io_counters()
                 disk_write_mb = 0.0
+                disk_read_mb = 0.0
                 if last_disk_io:
                      write_bytes = disk_io.write_bytes - last_disk_io.write_bytes
+                     read_bytes = disk_io.read_bytes - last_disk_io.read_bytes
                      disk_write_mb = (write_bytes / 1024 / 1024) / dt
+                     disk_read_mb = (read_bytes / 1024 / 1024) / dt
                 last_disk_io = disk_io
 
                 net_io = psutil.net_io_counters()
                 net_out_mb = 0.0
+                net_in_mb = 0.0
                 if last_net_io:
                     sent_bytes = net_io.bytes_sent - last_net_io.bytes_sent
+                    recv_bytes = net_io.bytes_recv - last_net_io.bytes_recv
                     net_out_mb = (sent_bytes / 1024 / 1024) / dt
+                    net_in_mb = (recv_bytes / 1024 / 1024) / dt
                 last_net_io = net_io
 
                 process_count = len(psutil.pids())
+                
+                # Network Connections Count
+                try:
+                    connections = len(psutil.net_connections(kind='inet'))
+                except Exception:
+                    connections = 0
+                    
+                # Top CPU Process
+                top_proc_name = "unknown"
+                top_proc_cpu = 0.0
+                try:
+                    for p in sorted(psutil.process_iter(['name', 'cpu_percent']), key=lambda p: p.info['cpu_percent'] or 0, reverse=True)[:1]:
+                        top_proc_name = p.info['name']
+                        top_proc_cpu = p.info['cpu_percent'] or 0.0
+                except Exception: 
+                    pass
 
             else:
                 # Mock data
                 cpu_usage = random.randint(10, 30)
                 ram_usage = random.randint(40, 60)
                 disk_write_mb = random.uniform(0.1, 5.0)
+                disk_read_mb = random.uniform(0.1, 10.0)
                 net_out_mb = random.uniform(0.01, 2.0)
+                net_in_mb = random.uniform(0.01, 5.0)
                 process_count = random.randint(100, 200)
+                connections = random.randint(10, 150)
+                top_proc_name = "svchost.exe"
+                top_proc_cpu = random.uniform(1.0, 15.0)
 
             # Send Heartbeat
-            logger.info(f"❤️  Heartbeat: CPU={cpu_usage}% RAM={ram_usage}%")
+            logger.info(f"❤️  Heartbeat: CPU={cpu_usage}% RAM={ram_usage}% TOP={top_proc_name}({top_proc_cpu}%)")
             send_event("system_heartbeat", f"Stats: CPU {cpu_usage}% | RAM {ram_usage}%", "low", {
                 "cpu": cpu_usage,
                 "ram": ram_usage,
                 "disk_write_mb": disk_write_mb,
+                "disk_read_mb": disk_read_mb,
                 "net_out_mb": net_out_mb,
+                "net_in_mb": net_in_mb,
                 "process_count": process_count,
+                "net_connections": connections,
+                "top_process": top_proc_name,
+                "top_process_cpu": top_proc_cpu,
                 "os": OS_INFO
             })
 

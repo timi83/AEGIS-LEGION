@@ -66,17 +66,41 @@ from src.services.anomaly_detector import manager
 
 @router.get("/ml/status")
 def get_ml_status(user: User = Depends(get_current_user)):
-    """Get the current training status of the ML Engine (Scoped to Org)."""
-    return manager.get_detector(user.organization_id).get_status()
+    """Get the aggregate training status of all ML Engines for this Org."""
+    org_prefix = f"{user.organization_id}:"
+    my_detectors = [d for k, d in manager.detectors.items() if str(k).startswith(org_prefix)]
+    
+    if not my_detectors:
+        return {"mode": "Waiting for Data", "samples": 0, "required_samples": 100, "progress": 0, "trained": False}
+        
+    total_samples = sum(d.get_status()["samples"] for d in my_detectors)
+    total_required = sum(d.get_status()["required_samples"] for d in my_detectors)
+    all_trained = all(d.get_status()["trained"] for d in my_detectors)
+    
+    mode = "Active" if all_trained else "Training"
+    progress = int((total_samples / total_required) * 100) if total_required > 0 else 0
+    if progress > 100: progress = 100
+    
+    return {
+        "mode": mode,
+        "samples": total_samples,
+        "required_samples": total_required,
+        "progress": progress,
+        "trained": all_trained
+    }
 
 @router.post("/ml/reset")
 def reset_ml_model(user: User = Depends(get_current_user)):
-    """Reset the ML model to training mode (Scoped to Org)."""
+    """Reset all ML models for this Org."""
     if user.role != 'admin':
         raise HTTPException(status_code=403, detail="Only admins can reset the ML brain.")
     
-    manager.get_detector(user.organization_id).reset()
-    return {"status": f"ML Brain Reset for Org {user.organization_id}"}
+    org_prefix = f"{user.organization_id}:"
+    for k, d in manager.detectors.items():
+        if str(k).startswith(org_prefix):
+            d.reset()
+            
+    return {"status": f"All ML Brains Reset for Org {user.organization_id}"}
 
 @router.get("/agent/download")
 def download_agent():

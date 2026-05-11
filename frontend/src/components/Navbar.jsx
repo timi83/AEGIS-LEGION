@@ -180,8 +180,11 @@ export default function Navbar() {
                 {location.pathname === '/rules' && (
                     <button className="btn-ghost" onClick={() => navigate('/dashboard')} style={{ marginRight: 8 }}>DASHBOARD</button>
                 )}
-                {location.pathname !== '/settings' && location.pathname !== '/dashboard' && location.pathname !== '/rules' && (
+                {location.pathname !== '/settings' && location.pathname !== '/dashboard' && location.pathname !== '/rules' && location.pathname !== '/ml' && (
                     <button className="btn-ghost" onClick={() => navigate('/dashboard')} style={{ marginRight: 8 }}>HOME</button>
+                )}
+                {location.pathname !== '/ml' && (
+                    <button className="btn-ghost" onClick={() => navigate('/ml')} style={{ marginRight: 8 }}>ML ENGINE</button>
                 )}
                 {location.pathname !== '/settings' && (
                     <button className="btn-ghost" onClick={() => navigate('/settings')} style={{ marginRight: 8 }}>SETTINGS</button>

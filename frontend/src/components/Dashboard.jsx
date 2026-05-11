@@ -11,8 +11,10 @@ import Navbar from "./Navbar";
 import { AuthContext } from "../context/AuthContext";
 import { EventsContext } from "../context/EventsContext";
 
-function MLStatusCard({ apiBase, token, user }) {
-  const [status, setStatus] = useState(null);
+import { Link } from "react-router-dom";
+
+function MLStatusCard({ apiBase, token }) {
+  const [statuses, setStatuses] = useState([]);
 
   useEffect(() => {
     if (!token) return;
@@ -21,7 +23,7 @@ function MLStatusCard({ apiBase, token, user }) {
         const res = await axios.get(`${apiBase}/servers/ml/status`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setStatus(res.data);
+        setStatuses(res.data);
       } catch (e) {
         console.error("Failed to load ML Status", e);
       }
@@ -31,77 +33,34 @@ function MLStatusCard({ apiBase, token, user }) {
     return () => clearInterval(interval);
   }, [token, apiBase]);
 
-  if (!status) return null;
-
-  const handleReset = async () => {
-    if (!window.confirm("Are you sure you want to RESET the ML Brain? It will forget all patterns.")) return;
-    try {
-      await axios.post(`${apiBase}/servers/ml/reset`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // Force refresh immediately
-      setStatus(prev => ({ ...prev, mode: "Training", samples: 0, progress: 0 }));
-    } catch (e) {
-      alert("Failed to reset: " + e.message);
-    }
-  };
-
-  const isTraining = status.mode === "Training";
-  const isAdmin = user?.role === 'admin';
-
   return (
-    <div className="card" style={{ borderColor: isTraining ? 'var(--accent)' : 'var(--ok)' }}>
+    <div className="card">
       <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>ML Brain Monitor</span>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {!isTraining && isAdmin && (
-            <button
-              onClick={handleReset}
-              style={{
-                background: 'transparent',
-                border: '1px solid #444',
-                color: '#666',
-                fontSize: 10,
-                padding: '2px 6px',
-                cursor: 'pointer',
-                borderRadius: 4
-              }}
-              title="Reset ML Model"
-            >
-              RESET
-            </button>
-          )}
-          <span className={`badge ${isTraining ? 'warning' : 'ok'}`}>
-            {isTraining ? 'LEARNING' : 'ACTIVE'}
-          </span>
-        </div>
+        <Link to="/ml" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '4px 8px', border: '1px solid var(--accent)', borderRadius: 4 }}>
+          Manage Models →
+        </Link>
       </div>
-      <div style={{ marginTop: 10 }}>
-        {isTraining ? (
-          <>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 5 }}>
-              Building Baseline Model... ({status.samples}/{status.required_samples} samples)
-            </div>
-            <div style={{ width: '100%', height: 6, background: '#333', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{
-                width: `${status.progress}%`,
-                height: '100%',
-                background: 'var(--accent)',
-                transition: 'width 0.5s ease'
-              }} />
-            </div>
-            <div style={{ textAlign: 'right', fontSize: 10, marginTop: 4, color: 'var(--accent)' }}>
-              {status.progress}% Complete
-            </div>
-          </>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontSize: 24 }}>🧠</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Anomaly Detection is <strong>Online</strong>.<br />
-              Monitoring behavior deviations.
-            </div>
+      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+        {statuses.length === 0 ? (
+          <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', textAlign: "center", padding: "10px 0" }}>
+            No ML models active yet. Waiting for server telemetry...
           </div>
+        ) : (
+          statuses.map(s => {
+            const isTraining = s.mode === "Training";
+            return (
+              <div key={s.source} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: isTraining ? 'var(--warning)' : 'var(--ok)' }} />
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{s.source}</span>
+                </div>
+                <div style={{ color: "var(--muted)" }}>
+                  {isTraining ? <span style={{ color: "var(--warning)" }}>Training ({s.progress}%)</span> : <span style={{ color: "var(--ok)" }}>Trained (Active)</span>}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

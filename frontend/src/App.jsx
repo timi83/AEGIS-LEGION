@@ -7,6 +7,7 @@ import Register from "./components/Register";
 import Settings from "./components/Settings";
 import ResetPassword from "./components/ResetPassword";
 import LandingPage from "./components/LandingPage"; // Import Landing
+import MLMonitor from "./components/MLMonitor";
 import { AuthProvider } from "./context/AuthContext";
 import { EventsProvider } from "./context/EventsContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -42,6 +43,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ml"
+              element={
+                <ProtectedRoute>
+                  <MLMonitor apiBase="/api" />
                 </ProtectedRoute>
               }
             />

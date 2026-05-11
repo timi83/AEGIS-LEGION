@@ -109,8 +109,14 @@ export default function Rules({ apiBase = "/api" }) {
                                     <option value="data.cpu" />
                                     <option value="data.ram" />
                                     <option value="data.disk_write_mb" />
-                                    <option value="data.username" />
-                                    <option value="data.ip_address" />
+                                    <option value="data.disk_read_mb" />
+                                    <option value="data.net_in_mb" />
+                                    <option value="data.net_out_mb" />
+                                    <option value="data.net_connections" />
+                                    <option value="data.top_process" />
+                                    <option value="data.fail_count" />
+                                    <option value="data.user" />
+                                    <option value="data.path" />
                                 </datalist>
                                 <select value={op} onChange={e => setOp(e.target.value)} className="select" style={{ width: 100 }}>
                                     <option value="equals">equals</option>
@@ -172,26 +178,73 @@ export default function Rules({ apiBase = "/api" }) {
 
                 {showHelp && (
                     <div style={{
-                        marginTop: 16, padding: 16,
-                        border: '1px dashed #444', borderRadius: 8,
-                        background: 'rgba(0,0,0,0.2)',
-                        animation: 'fadeIn 0.5s ease'
+                        marginTop: 16, padding: 24,
+                        border: '1px solid #333', borderRadius: 8,
+                        background: 'var(--bg-card, rgba(0,0,0,0.4))',
+                        animation: 'fadeIn 0.5s ease',
+                        color: 'var(--text-muted)',
+                        fontSize: 13,
+                        lineHeight: 1.6
                     }}>
-                        <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: 'var(--accent)' }}>Rule Creation Guide</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, fontSize: 12, color: 'var(--text-muted)' }}>
+                        <h4 style={{ margin: '0 0 16px 0', fontSize: 16, color: 'var(--accent)' }}>Rule Creation Guide</h4>
+                        
+                        <div style={{ marginBottom: 20 }}>
+                            <strong style={{ color: '#fff', fontSize: 14 }}>1. How Rules Work</strong>
+                            <p style={{ marginTop: 4 }}>
+                                When your agent sends an event, it includes a JSON payload. A Rule acts as an automated tripwire: 
+                                <em>"If the payload contains X, and X is greater than Y, create an Incident."</em><br />
+                                Use <strong>Dot Notation</strong> to target specific pieces of data (e.g., <code>data.cpu</code>).
+                            </p>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 20 }}>
                             <div>
-                                <strong style={{ color: '#fff' }}>Metric Fields:</strong><br />
-                                Agent metrics are nested in <code>data</code>.<br />
-                                • CPU: <code>data.cpu</code> (0-100)<br />
-                                • RAM: <code>data.ram</code> (0-100)<br />
-                                • Disk: <code>data.disk_write_mb</code>
+                                <strong style={{ color: '#fff', fontSize: 14 }}>2. Available Metric Fields</strong>
+                                <div style={{ marginTop: 8 }}>
+                                    <strong style={{ color: '#ddd' }}>Top-Level Fields:</strong><br />
+                                    • <code>event_type</code>: e.g., system_heartbeat, login_failed<br />
+                                    • <code>source</code>: Server hostname<br />
+                                    <br />
+                                    <strong style={{ color: '#ddd' }}>Universal Data:</strong><br />
+                                    • <code>data.ip</code>: IP address<br />
+                                    • <code>data.os</code>: Operating System<br />
+                                    <br />
+                                    <strong style={{ color: '#ddd' }}>Hardware Metrics (system_heartbeat):</strong><br />
+                                    • <code>data.cpu</code> / <code>data.ram</code> (0-100)<br />
+                                    • <code>data.disk_read_mb</code> / <code>data.disk_write_mb</code><br />
+                                    • <code>data.net_in_mb</code> / <code>data.net_out_mb</code><br />
+                                    • <code>data.net_connections</code>: Active network connections<br />
+                                    • <code>data.top_process</code>: Highest CPU process name<br />
+                                    <br />
+                                    <strong style={{ color: '#ddd' }}>Threat Specific:</strong><br />
+                                    • <code>data.fail_count</code> / <code>data.user</code> (login_failed)<br />
+                                    • <code>data.path</code> / <code>data.hash</code> (malware_detected)<br />
+                                </div>
                             </div>
+                            
                             <div>
-                                <strong style={{ color: '#fff' }}>Operators:</strong><br />
-                                • <code>gt</code>: Greater Than<br />
-                                • <code>lt</code>: Less Than<br />
-                                • <code>contains</code>: Substring Match<br />
-                                • <code>equals</code>: Exact Match
+                                <strong style={{ color: '#fff', fontSize: 14 }}>3. Operators</strong>
+                                <ul style={{ marginTop: 8, paddingLeft: 20 }}>
+                                    <li><code>gt</code>: Greater Than (Best for numeric spikes)</li>
+                                    <li><code>lt</code>: Less Than (Best for sudden drops)</li>
+                                    <li><code>equals</code>: Exact Match (Best for strings)</li>
+                                    <li><code>contains</code>: Substring Match (Best for paths/names)</li>
+                                </ul>
+
+                                <strong style={{ color: '#fff', fontSize: 14, display: 'block', marginTop: 20 }}>4. Real-World Examples</strong>
+                                <div style={{ marginTop: 8, background: 'rgba(0,0,0,0.3)', padding: 12, borderRadius: 6 }}>
+                                    <strong style={{ color: 'var(--primary)' }}>A. Crypto-Miner (High CPU)</strong><br />
+                                    Field: <code>data.cpu</code> | Op: <code>gt</code> | Value: <code>95</code>
+                                    <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '8px 0' }} />
+                                    
+                                    <strong style={{ color: 'var(--primary)' }}>B. Data Exfiltration (Massive Upload)</strong><br />
+                                    Field: <code>data.net_out_mb</code> | Op: <code>gt</code> | Value: <code>500</code>
+                                    <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '8px 0' }} />
+                                    
+                                    <strong style={{ color: 'var(--primary)' }}>C. Ransomware (High Disk Writes)</strong><br />
+                                    Cond 1: <code>event_type</code> | <code>equals</code> | <code>system_heartbeat</code><br />
+                                    Cond 2: <code>data.disk_write_mb</code> | <code>gt</code> | <code>1000</code>
+                                </div>
                             </div>
                         </div>
                     </div>

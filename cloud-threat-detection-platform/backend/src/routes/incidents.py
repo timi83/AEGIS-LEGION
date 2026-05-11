@@ -262,16 +262,12 @@ async def create_incident_note(incident_id: int, payload: dict, db: Session = De
             if should_notify and target.id != current_user.id:
                  notified_user_ids.add(target.id)
 
-    # Handle specific @mentions (Robust Regex)
+    # Handle specific @mentions dynamically by scanning for actual usernames
     import re
-    # Extract all words starting with @
-    # Pattern: @ followed by word characters, stopping at space or punctuation
-    raw_mentions = re.findall(r"@([\w\.-]+)", content) 
-    
-    for tag in raw_mentions:
-        # Case-insensitive match against org users
-        target = next((u for u in org_users if u.username.lower() == tag.lower()), None)
-        if target and target.id != current_user.id:
+    for target in org_users:
+        # Check if "@username" exists in the text (case-insensitive), preventing partial substring matches
+        pattern = r"@" + re.escape(target.username.lower()) + r"(?!\w)"
+        if re.search(pattern, content.lower()) and target.id != current_user.id:
              notified_user_ids.add(target.id)
             
     # Create Notifications

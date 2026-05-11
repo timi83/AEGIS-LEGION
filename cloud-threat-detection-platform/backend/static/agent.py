@@ -212,3 +212,6 @@ def run_agent():
             time.sleep(1)
     except KeyboardInterrupt:
         logger.info("Agent stopped by user.")
+
+if __name__ == "__main__":
+    run_agent()

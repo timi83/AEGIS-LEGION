@@ -30,6 +30,7 @@ class RuleCreateModel(BaseModel):
     conditions: List[ConditionModel]
     severity: Optional[str] = "medium"
     enabled: Optional[bool] = True
+    target_server: Optional[str] = None
 
 @router.post("/", response_model=dict)
 def create_rule(payload: RuleCreateModel, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -41,7 +42,8 @@ def create_rule(payload: RuleCreateModel, current_user = Depends(get_current_use
         enabled=payload.enabled,
         created_at=datetime.utcnow(),
         organization_id=current_user.organization_id,
-        organization=current_user.organization
+        organization=current_user.organization,
+        target_server=payload.target_server
     )
     db.add(rule)
     db.commit()
@@ -62,6 +64,7 @@ def list_rules(current_user = Depends(get_current_user), db: Session = Depends(g
             "severity": r.severity,
             "enabled": r.enabled,
             "created_at": r.created_at,
+            "target_server": r.target_server,
         })
     return output
 

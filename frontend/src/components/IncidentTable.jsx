@@ -96,6 +96,7 @@ export default function IncidentTable({ incidents = [], onView, apiBase = "/api"
           <tr style={{ borderBottom: '1px solid var(--panel-border)' }}>
             <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 500 }}>ID</th>
             <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 500 }}>Title</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 500 }}>Server</th>
             <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 500 }}>Assignee</th>
             <th
               style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 500, cursor: 'pointer' }}
@@ -124,6 +125,26 @@ export default function IncidentTable({ incidents = [], onView, apiBase = "/api"
             <tr key={i.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
               <td style={{ padding: '12px 16px', fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>#{i.org_incident_id || i.id}</td>
               <td style={{ padding: '12px 16px', fontWeight: 500 }}>{i.title}</td>
+              <td style={{ padding: '12px 16px' }}>
+                {i.source ? (
+                  <span style={{ 
+                    background: 'rgba(255,255,255,0.05)', 
+                    padding: '4px 8px', 
+                    borderRadius: 4, 
+                    fontSize: 11,
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--text-main)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    🖥️ {i.source}
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: 11 }}>System</span>
+                )}
+              </td>
 
               {/* ASSIGNEE COLUMN */}
               <td style={{ padding: '12px 16px' }}>

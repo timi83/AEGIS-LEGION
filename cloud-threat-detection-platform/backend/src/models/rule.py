@@ -22,6 +22,7 @@ class Rule(Base):
     # Isolation Fields (Nullable for migration, but logic will enforce it)
     organization_id = Column(Integer, nullable=True) # Linked to Organization.id (Logic-enforced FK)
     organization = Column(String(255), nullable=True) # Legacy/Backup string identifier
+    target_server = Column(String(255), nullable=True) # Specific server hostname or None for Global
 
     def get_conditions(self):
         try:

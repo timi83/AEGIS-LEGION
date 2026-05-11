@@ -98,6 +98,14 @@ def startup_event():
         init_db()
     except Exception as e:
         logger.error(f"init_db failed: {e}")
+        
+    # Auto-migration for new columns
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE rules ADD COLUMN target_server VARCHAR(255)"))
+            logger.info("✅ Added target_server column to rules table.")
+    except Exception:
+        logger.info("ℹ️ target_server column check (already exists)")
 
     # Start Kafka consumer in a background daemon thread
     if os.getenv("KAFKA_ENABLED") == "true":

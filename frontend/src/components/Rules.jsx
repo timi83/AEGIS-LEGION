@@ -7,6 +7,7 @@ import Navbar from "./Navbar";
 export default function Rules({ apiBase = "/api" }) {
     const { token } = useContext(AuthContext);
     const [rules, setRules] = useState([]);
+    const [servers, setServers] = useState([]);
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [severity, setSeverity] = useState("medium");
@@ -14,6 +15,7 @@ export default function Rules({ apiBase = "/api" }) {
     const [op, setOp] = useState("equals");
     const [value, setValue] = useState("");
     const [status, setStatus] = useState("");
+    const [targetServer, setTargetServer] = useState("");
     const [showHelp, setShowHelp] = useState(false);
 
     async function fetchRules() {
@@ -29,8 +31,21 @@ export default function Rules({ apiBase = "/api" }) {
         }
     }
 
+    async function fetchServers() {
+        if (!token) return;
+        try {
+            const res = await axios.get(`${apiBase}/servers/`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setServers(res.data || []);
+        } catch (e) {
+            console.error("fetchServers error", e);
+        }
+    }
+
     useEffect(() => {
         fetchRules();
+        fetchServers();
     }, [token]);
 
     async function createRule(e) {
@@ -42,6 +57,7 @@ export default function Rules({ apiBase = "/api" }) {
                 name,
                 description,
                 severity,
+                target_server: targetServer || null,
                 conditions: [{ field, op, value }]
             };
             const res = await axios.post(`${apiBase}/rules/`, payload, {
@@ -49,7 +65,7 @@ export default function Rules({ apiBase = "/api" }) {
             });
             setStatus("Rule created");
             // reset form
-            setName(""); setDescription(""); setValue(""); setField("event_type"); setOp("equals");
+            setName(""); setDescription(""); setValue(""); setField("event_type"); setOp("equals"); setTargetServer("");
             fetchRules();
         } catch (err) {
             console.error("createRule error", err);
@@ -87,6 +103,12 @@ export default function Rules({ apiBase = "/api" }) {
                                     <option value="medium">Medium</option>
                                     <option value="high">High</option>
                                     <option value="critical">Critical</option>
+                                </select>
+                                <select value={targetServer} onChange={e => setTargetServer(e.target.value)} className="select" style={{ gridColumn: "1 / -1" }}>
+                                    <option value="">Apply to All Servers (Global)</option>
+                                    {servers.map(s => (
+                                        <option key={s.hostname} value={s.hostname}>Apply only to {s.hostname}</option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -129,7 +151,7 @@ export default function Rules({ apiBase = "/api" }) {
 
                             <div style={{ gridColumn: "1 / -1", display: "flex", gap: 12, marginTop: 12 }}>
                                 <button type="submit" className="btn">Create Rule</button>
-                                <button type="button" className="btn-ghost" onClick={() => { setName(""); setDescription(""); setValue(""); setField("event_type"); setOp("equals"); }}>Clear</button>
+                                <button type="button" className="btn-ghost" onClick={() => { setName(""); setDescription(""); setValue(""); setField("event_type"); setOp("equals"); setTargetServer(""); }}>Clear</button>
                             </div>
                         </form>
                         <div style={{ color: "var(--accent)", marginBottom: 12, fontSize: 14 }}>{status}</div>
@@ -142,6 +164,16 @@ export default function Rules({ apiBase = "/api" }) {
                                             <div style={{ fontWeight: 600, color: "var(--text-main)", display: "flex", alignItems: "center", gap: 8 }}>
                                                 {r.name}
                                                 <span className={`badge ${r.severity}`}>{r.severity}</span>
+                                                {r.target_server && (
+                                                    <span style={{ fontSize: 10, background: 'rgba(0, 255, 157, 0.1)', color: 'var(--ok)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--ok)' }}>
+                                                        🎯 {r.target_server}
+                                                    </span>
+                                                )}
+                                                {!r.target_server && (
+                                                    <span style={{ fontSize: 10, background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', padding: '2px 6px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        🌐 Global
+                                                    </span>
+                                                )}
                                             </div>
                                             <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4 }}>{r.description}</div>
                                             <div style={{ marginTop: 6, fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--primary)" }}>

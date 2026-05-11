@@ -42,7 +42,7 @@ def _find_existing_incident(db: Session, source: str, event_type: str, user_id: 
         return None
 
 
-def _update_existing_incident(db: Session, incident: Incident, event: dict):
+def _update_existing_incident(db: Session, incident: Incident, event: dict, new_severity: str = None):
     """
     Update existing incident instead of creating a new one.
     """
@@ -60,6 +60,16 @@ def _update_existing_incident(db: Session, incident: Incident, event: dict):
         )
 
         incident.updated_at = datetime.utcnow()
+        
+        # Priority Override System: Upgrade severity if specific rule is higher
+        if new_severity:
+            levels = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+            current_level = levels.get(incident.severity.lower() if incident.severity else "low", 0)
+            new_level = levels.get(new_severity.lower(), 0)
+            if new_level > current_level:
+                incident.severity = new_severity
+                logger.info(f"Upgraded incident severity to {new_severity} via overriding rule")
+                
         db.commit()
         db.refresh(incident)
 
@@ -244,16 +254,18 @@ def process_event(event: dict, db: Session) -> List[Dict[str, Any]]:
             if organization_id is not None:
                 # Isolate: Rules must match Org
                 query = query.filter(Rule.organization_id == organization_id)
+                from sqlalchemy import or_
+                query = query.filter(or_(Rule.target_server == None, Rule.target_server == source))
                 print(f"🔍 DEBUG: Fetching rules for Org ID: {organization_id}", flush=True)
             else:
-                # Legacy/Global fallback (or maybe strictly require Org?)
-                # For now, let's allow "NULL" org rules to be global (System Rules) 
-                # OR if event has no org (legacy agent), match global rules.
-                # Let's be strict for security: If event has no org, only match global rules (org_id is null)
+                # Legacy/Global fallback
                 query = query.filter(Rule.organization_id == None)
                 print(f"🔍 DEBUG: Fetching GLOBAL rules (No Org ID in event)", flush=True)
 
             rules = query.all()
+            # Priority Sorting: Targeted rules (not None) evaluated FIRST
+            rules.sort(key=lambda r: getattr(r, "target_server", None) is None)
+            
             print(f"🔍 DEBUG: Found {len(rules)} active rules for this context", flush=True)
 
             for r in rules:
@@ -270,7 +282,7 @@ def process_event(event: dict, db: Session) -> List[Dict[str, Any]]:
                     existing = _find_existing_incident(db, source, event_type, user_id)
 
                     if existing:
-                        result = _update_existing_incident(db, existing, event)
+                        result = _update_existing_incident(db, existing, event, new_severity=getattr(r, "severity", None))
                         results.append({
                             "rule_id": r.id, 
                             "merged": True, 

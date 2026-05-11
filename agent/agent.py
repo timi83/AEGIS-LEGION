@@ -11,8 +11,8 @@ import socket
 import logging
 
 # Configuration
-API_URL = os.getenv("AGENT_API_URL", "https://aegis-legion.onrender.com/api")
 import os
+API_URL = os.getenv("AGENT_API_URL", "https://aegis-legion.onrender.com/api")
 
 # ---------------------------------------------------------
 # 🔑 CONFIGURATION

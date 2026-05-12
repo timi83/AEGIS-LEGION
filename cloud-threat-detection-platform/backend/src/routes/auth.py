@@ -71,7 +71,7 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
     
     db_email = db.query(User).filter(User.email == user.email).first()
     if db_email:
-        raise HTTPException(status_code=400, detail="This email exists already. Try to login.")
+        raise HTTPException(status_code=400, detail="Registration failed: Invalid details or Organization already exists.")
     
     if not user.organization:
          raise HTTPException(status_code=400, detail="Organization is required for registration")
@@ -79,7 +79,7 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
     # Check Org Uniqueness (Case Insensitive?)
     existing_org = db.query(Organization).filter(Organization.name == user.organization).first()
     if existing_org:
-        raise HTTPException(status_code=400, detail="Organization name already taken.")
+        raise HTTPException(status_code=400, detail="Registration failed: Invalid details or Organization already exists.")
 
     # Create Organization
     new_org = Organization(name=user.organization)

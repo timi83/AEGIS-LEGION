@@ -5,7 +5,9 @@ from passlib.context import CryptContext
 import os
 
 # Secret key for JWT encoding/decoding
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
+SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("FATAL ERROR: JWT_SECRET environment variable is missing! Refusing to start to prevent forgery.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

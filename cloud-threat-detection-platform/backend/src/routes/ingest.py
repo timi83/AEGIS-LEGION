@@ -81,8 +81,13 @@ async def get_user_for_ingest(
             
     raise HTTPException(status_code=401, detail="Missing or Invalid Authentication (API Key or Bearer Token required)")
 
+from fastapi import Request
+from src.core.limiter import limiter
+
 @router.post("/")
+@limiter.limit("5/second")
 async def ingest_event(
+    request: Request,
     payload: EventPayload, 
     user: User = Depends(get_user_for_ingest), 
     db: Session = Depends(get_db)

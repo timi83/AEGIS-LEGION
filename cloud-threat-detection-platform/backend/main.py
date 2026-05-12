@@ -21,11 +21,28 @@ from src.database import init_db, get_db
 from src.models import user, server, incident, rule, audit_log, incident_note, notification
 from src.routes import incidents_router, rules_router, ingest_router, auth_router, servers, notifications_router
 from src.routes.events import router as events_router
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from src.core.limiter import limiter
+from fastapi import Request, Response
 
-limiter = Limiter(key_func=get_remote_address)
+class ContentSizeLimitMiddleware:
+    def __init__(self, app, max_content_length: int = 50 * 1024):
+        self.app = app
+        self.max_content_length = max_content_length
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+            
+        headers = dict(scope.get("headers", []))
+        content_length = headers.get(b"content-length")
+        
+        if content_length and int(content_length) > self.max_content_length:
+            response = Response(content="Payload Too Large (Max 50KB)", status_code=413)
+            return await response(scope, receive, send)
+            
+        return await self.app(scope, receive, send)
 app = FastAPI(title="CTDIRP Backend")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -55,11 +72,13 @@ if env_origins:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow ALL origins (Vercel, localhost, etc.)
-    allow_credentials=False, # We use Token Auth (Headers), so Cookies/Creds not needed. This allows wildcard origin.
+    allow_origins=origins,  # Secured to only allowed origins (Not '*')
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(ContentSizeLimitMiddleware, max_content_length=50*1024) # 50KB limit against Memory Exhaustion DoS
 
 
 logging.basicConfig(level=logging.INFO)

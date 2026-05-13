@@ -90,6 +90,21 @@ def reset_ml_model(payload: MLResetPayload, user: User = Depends(get_current_use
     
     raise HTTPException(status_code=404, detail="ML Model not found for this server.")
 
+@router.post("/ml/approve")
+def approve_ml_model(payload: MLResetPayload, user: User = Depends(get_current_user)):
+    """Approve a newly trained ML model to prevent data poisoning."""
+    if user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Only admins can approve the ML brain.")
+    
+    target_key = f"{user.organization_id}:{payload.source}"
+    detector = manager.detectors.get(target_key)
+    
+    if detector:
+        detector.approve()
+        return {"status": f"ML Brain Approved for {payload.source}"}
+    
+    raise HTTPException(status_code=404, detail="ML Model not found for this server.")
+
 @router.get("/agent/download")
 def download_agent():
     """Download the official Agent Script."""

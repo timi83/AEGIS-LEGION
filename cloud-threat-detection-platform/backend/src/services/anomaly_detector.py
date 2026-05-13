@@ -32,6 +32,7 @@ class AnomalyDetector:
         self.buffer = deque(maxlen=TRAINING_BUFFER_SIZE)
         self.is_trained = False
         self.training_mode = True
+        self.pending_approval = False
         
         # Load existing model if available
         if os.path.exists(self.model_path):
@@ -56,6 +57,7 @@ class AnomalyDetector:
             
             self.is_trained = True
             self.training_mode = False
+            self.pending_approval = True # Prevent Data Poisoning: Wait for Admin
             
             # Save model
             joblib.dump(self.model, self.model_path)
@@ -67,11 +69,12 @@ class AnomalyDetector:
     def get_status(self) -> dict:
         """Returns the current status of the ML model."""
         return {
-            "mode": "Training" if self.training_mode else "Active",
+            "mode": "Training" if self.training_mode else ("Pending Approval" if self.pending_approval else "Active"),
             "samples": len(self.buffer),
             "required_samples": TRAINING_BUFFER_SIZE,
             "progress": int((len(self.buffer) / TRAINING_BUFFER_SIZE) * 100) if self.training_mode else 100,
             "trained": self.is_trained,
+            "pending_approval": self.pending_approval,
             "organization_id": self.organization_id,
             "source": self.source
         }
@@ -82,6 +85,7 @@ class AnomalyDetector:
         self.model = None
         self.is_trained = False
         self.training_mode = True
+        self.pending_approval = False
         if os.path.exists(self.model_path):
             try:
                 os.remove(self.model_path)
@@ -89,6 +93,11 @@ class AnomalyDetector:
             except Exception as e:
                 logger.error(f"Failed to delete model file: {e}")
         logger.info(f"🔄 ML Model for {self.source} Reset to Training Mode.")
+
+    def approve(self):
+        """Approves the trained model for active inference."""
+        self.pending_approval = False
+        logger.info(f"✅ ML Model for Org {self.organization_id} (Server: {self.source}) APPROVED by Admin.")
 
     def process_event(self, event: dict) -> dict | None:
         """
@@ -126,6 +135,9 @@ class AnomalyDetector:
 
         # 2. Inference Phase
         if self.is_trained and self.model:
+            if self.pending_approval:
+                return None # Model is dormant until Admin validation
+                
             try:
                 X = np.array([features])
                 pred = self.model.predict(X)[0]

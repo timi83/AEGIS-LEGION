@@ -40,6 +40,17 @@ export default function MLMonitor({ apiBase = "/api" }) {
     }
   };
 
+  const handleApprove = async (source) => {
+    try {
+      await axios.post(`${apiBase}/servers/ml/approve`, { source }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchStatuses();
+    } catch (e) {
+      alert("Failed to approve: " + e.response?.data?.detail || e.message);
+    }
+  };
+
   const isAdmin = user?.role === 'admin';
 
   return (
@@ -67,16 +78,19 @@ export default function MLMonitor({ apiBase = "/api" }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
                 {statuses.map(s => {
                     const isTraining = s.mode === "Training";
+                    const isPending = s.pending_approval;
+                    const isActive = s.mode === "Active";
+
                     return (
-                        <div key={s.source} className="card" style={{ borderColor: isTraining ? 'var(--warning)' : 'var(--ok)' }}>
+                        <div key={s.source} className="card" style={{ borderColor: isTraining ? 'var(--warning)' : isPending ? 'gold' : 'var(--ok)' }}>
                             <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                                 <span style={{ fontSize: 16, color: "var(--text-main)" }}>{s.source}</span>
-                                <span className={`badge ${isTraining ? 'warning' : 'ok'}`}>
-                                    {isTraining ? 'LEARNING' : 'ACTIVE'}
+                                <span className={`badge ${isTraining ? 'warning' : isPending ? 'warning' : 'ok'}`} style={{ backgroundColor: isPending ? 'rgba(255, 215, 0, 0.1)' : undefined, color: isPending ? 'gold' : undefined }}>
+                                    {isTraining ? 'LEARNING' : isPending ? 'PENDING APPROVAL' : 'ACTIVE'}
                                 </span>
                             </div>
 
-                            {isTraining ? (
+                            {isTraining && (
                                 <div>
                                     <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
                                         Building Baseline Model... ({s.samples}/{s.required_samples} samples)
@@ -93,7 +107,19 @@ export default function MLMonitor({ apiBase = "/api" }) {
                                         {s.progress}% Complete
                                     </div>
                                 </div>
-                            ) : (
+                            )}
+
+                            {isPending && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: "10px 0" }}>
+                                    <div style={{ fontSize: 28 }}>🛡️</div>
+                                    <div style={{ fontSize: 12, color: 'gold' }}>
+                                        Model is <strong>Trained & Dormant</strong>.<br />
+                                        Awaiting Admin approval to prevent data poisoning.
+                                    </div>
+                                </div>
+                            )}
+
+                            {isActive && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: "10px 0" }}>
                                     <div style={{ fontSize: 28 }}>🧠</div>
                                     <div style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -104,7 +130,16 @@ export default function MLMonitor({ apiBase = "/api" }) {
                             )}
 
                             {isAdmin && (
-                                <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.05)", textAlign: "right" }}>
+                                <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: isPending ? "space-between" : "flex-end", alignItems: "center" }}>
+                                    {isPending && (
+                                        <button 
+                                            className="btn" 
+                                            style={{ fontSize: 11, padding: "6px 12px", background: "gold", color: "#000", fontWeight: "bold" }}
+                                            onClick={() => handleApprove(s.source)}
+                                        >
+                                            APPROVE BASELINE
+                                        </button>
+                                    )}
                                     <button 
                                         className="btn-ghost btn-danger" 
                                         style={{ fontSize: 11, padding: "6px 12px" }}

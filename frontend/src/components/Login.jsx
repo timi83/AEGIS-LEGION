@@ -16,10 +16,8 @@ export default function Login() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("Login form submitted"); // DEBUG
         setError('');
         try {
-            console.log("Sending login request...", { email, password }); // DEBUG
             const formData = new FormData();
             formData.append('username', email); // BACKEND EXPECTS 'username' KEY BUT VALUE IS EMAIL
             formData.append('password', password);
@@ -27,10 +25,8 @@ export default function Login() {
             const res = await axios.post('/api/token', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            console.log("Login response:", res.data); // DEBUG
 
             login(res.data.access_token);
-            console.log("Navigating to dashboard..."); // DEBUG
             navigate('/dashboard');
         } catch (err) {
             console.error("Login error full:", err);

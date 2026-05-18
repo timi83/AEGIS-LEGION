@@ -77,6 +77,10 @@ temp_logs_*.txt
 debug_*.log
 *.log
 
+# Databases
+*.db
+*.sqlite
+
 # OS
 .DS_Store
 Thumbs.db

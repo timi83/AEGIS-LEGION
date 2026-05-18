@@ -227,7 +227,8 @@ export default function Settings() {
                         </div>
 
                         <h3 style={{ fontSize: 16, marginBottom: 10, color: 'var(--muted)' }}>Existing Users</h3>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="table-responsive">
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                             <thead>
                                 <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 12 }}>
                                     <th style={{ padding: 5 }}>USERNAME</th>
@@ -285,6 +286,7 @@ export default function Settings() {
                                 ))}
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 )}
 
@@ -347,7 +349,8 @@ export default function Settings() {
                     {auditLogs.length === 0 ? (
                         <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No audit records found.</div>
                     ) : (
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="table-responsive">
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                             <thead>
                                 <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 12 }}>
                                     <th style={{ padding: 10 }}>TIME</th>
@@ -375,6 +378,7 @@ export default function Settings() {
                                 ))}
                             </tbody>
                         </table>
+                        </div>
                     )}
                 </div>
 
@@ -385,7 +389,8 @@ export default function Settings() {
                     {servers.length === 0 ? (
                         <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No servers connected yet.</div>
                     ) : (
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="table-responsive">
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                             <thead>
                                 <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 12 }}>
                                     <th style={{ padding: 10 }}>STATUS</th>
@@ -449,6 +454,7 @@ export default function Settings() {
                                 ))}
                             </tbody>
                         </table>
+                        </div>
                     )}
                 </div>
             </div>

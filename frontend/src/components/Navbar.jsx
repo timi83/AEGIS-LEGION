@@ -11,6 +11,7 @@ export default function Navbar() {
     const navigate = useNavigate();
     const location = useLocation();
     const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
     // Notifications State
     const [notifs, setNotifs] = useState([]);
@@ -172,30 +173,65 @@ export default function Navbar() {
                     <div className="user-name">{user?.username || user?.sub || 'Commander'}</div>
                     <div className="user-role">{getRoleDisplay(user?.role)}</div>
                 </div>
-                {location.pathname === '/dashboard' && (
-                    <button className="btn-ghost" onClick={() => navigate('/rules')} style={{ marginRight: 8 }}>RULES</button>
-                )}
-                {/* ... existing logic ... */}
-                {/* Redundant location checks logic kept for compatibility */}
-                {location.pathname === '/rules' && (
-                    <button className="btn-ghost" onClick={() => navigate('/dashboard')} style={{ marginRight: 8 }}>DASHBOARD</button>
-                )}
-                {location.pathname !== '/settings' && location.pathname !== '/dashboard' && location.pathname !== '/rules' && location.pathname !== '/ml' && (
-                    <button className="btn-ghost" onClick={() => navigate('/dashboard')} style={{ marginRight: 8 }}>HOME</button>
-                )}
-                {location.pathname !== '/ml' && (
-                    <button className="btn-ghost" onClick={() => navigate('/ml')} style={{ marginRight: 8 }}>ML ENGINE</button>
-                )}
-                {location.pathname !== '/settings' && (
-                    <button className="btn-ghost" onClick={() => navigate('/settings')} style={{ marginRight: 8 }}>SETTINGS</button>
-                )}
-                {location.pathname === '/settings' && (
-                    <button className="btn-ghost" onClick={() => navigate('/dashboard')} style={{ marginRight: 8 }}>DASHBOARD</button>
-                )}
-                <button className="btn-ghost btn-danger" onClick={handleLogout}>
-                    LOGOUT
+                
+                <div className="desktop-menu">
+                    {location.pathname === '/dashboard' && (
+                        <button className="btn-ghost" onClick={() => navigate('/rules')}>RULES</button>
+                    )}
+                    {location.pathname === '/rules' && (
+                        <button className="btn-ghost" onClick={() => navigate('/dashboard')}>DASHBOARD</button>
+                    )}
+                    {location.pathname !== '/settings' && location.pathname !== '/dashboard' && location.pathname !== '/rules' && location.pathname !== '/ml' && (
+                        <button className="btn-ghost" onClick={() => navigate('/dashboard')}>HOME</button>
+                    )}
+                    {location.pathname !== '/ml' && (
+                        <button className="btn-ghost" onClick={() => navigate('/ml')}>ML ENGINE</button>
+                    )}
+                    {location.pathname !== '/settings' && (
+                        <button className="btn-ghost" onClick={() => navigate('/settings')}>SETTINGS</button>
+                    )}
+                    {location.pathname === '/settings' && (
+                        <button className="btn-ghost" onClick={() => navigate('/dashboard')}>DASHBOARD</button>
+                    )}
+                    <button className="btn-ghost btn-danger" onClick={handleLogout}>
+                        LOGOUT
+                    </button>
+                </div>
+
+                <button className="mobile-menu-toggle" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                    ☰
                 </button>
             </div>
+
+            {isMobileMenuOpen && (
+                <div className="mobile-menu-container animate-fade-in">
+                    <div style={{ padding: '8px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: 8 }} onClick={() => { setIsProfileOpen(true); setIsMobileMenuOpen(false); }}>
+                        <div className="user-name" style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{user?.username || user?.sub || 'Commander'}</div>
+                        <div className="user-role" style={{ color: 'var(--text-muted)', fontSize: 12 }}>{getRoleDisplay(user?.role)}</div>
+                    </div>
+                    {location.pathname === '/dashboard' && (
+                        <button className="btn-ghost" onClick={() => { navigate('/rules'); setIsMobileMenuOpen(false); }}>RULES</button>
+                    )}
+                    {location.pathname === '/rules' && (
+                        <button className="btn-ghost" onClick={() => { navigate('/dashboard'); setIsMobileMenuOpen(false); }}>DASHBOARD</button>
+                    )}
+                    {location.pathname !== '/settings' && location.pathname !== '/dashboard' && location.pathname !== '/rules' && location.pathname !== '/ml' && (
+                        <button className="btn-ghost" onClick={() => { navigate('/dashboard'); setIsMobileMenuOpen(false); }}>HOME</button>
+                    )}
+                    {location.pathname !== '/ml' && (
+                        <button className="btn-ghost" onClick={() => { navigate('/ml'); setIsMobileMenuOpen(false); }}>ML ENGINE</button>
+                    )}
+                    {location.pathname !== '/settings' && (
+                        <button className="btn-ghost" onClick={() => { navigate('/settings'); setIsMobileMenuOpen(false); }}>SETTINGS</button>
+                    )}
+                    {location.pathname === '/settings' && (
+                        <button className="btn-ghost" onClick={() => { navigate('/dashboard'); setIsMobileMenuOpen(false); }}>DASHBOARD</button>
+                    )}
+                    <button className="btn-ghost btn-danger" onClick={handleLogout}>
+                        LOGOUT
+                    </button>
+                </div>
+            )}
 
             <ProfileModal
                 open={isProfileOpen}

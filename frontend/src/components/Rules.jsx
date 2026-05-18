@@ -95,8 +95,8 @@ export default function Rules({ apiBase = "/api" }) {
                 <div className="card" style={{ padding: 24 }}>
                     <h3 className="header">Rule Management</h3>
                     <div style={{ marginTop: 24 }}>
-                        <form onSubmit={createRule} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 32 }}>
-                            <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                        <form onSubmit={createRule} className="form-grid" style={{ marginBottom: 32 }}>
+                            <div className="form-grid" style={{ gridColumn: "1 / -1" }}>
                                 <input placeholder="Rule name" value={name} onChange={e => setName(e.target.value)} className="input" required />
                                 <select value={severity} onChange={e => setSeverity(e.target.value)} className="select">
                                     <option value="low">Low</option>
@@ -146,7 +146,7 @@ export default function Rules({ apiBase = "/api" }) {
                                     <option value="gt">gt</option>
                                     <option value="lt">lt</option>
                                 </select>
-                                <input placeholder="value" value={value} onChange={e => setValue(e.target.value)} className="input" style={{ flex: 1 }} />
+                                <input placeholder="value" value={value} onChange={e => setValue(e.target.value)} className="input" style={{ flex: 1, minWidth: 80 }} />
                             </div>
 
                             <div style={{ gridColumn: "1 / -1", display: "flex", gap: 12, marginTop: 12 }}>

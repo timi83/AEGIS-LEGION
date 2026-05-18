@@ -409,3 +409,130 @@ body {
   margin-right: 0px;
   /* Expand on hover */
 }
+
+/* --- RESPONSIVE LAYOUT ADJUSTMENTS --- */
+
+/* Desktop / Large Screens */
+.dashboard-layout {
+  grid-template-columns: 1fr 350px;
+  align-items: start;
+}
+
+/* Tablet / Mobile */
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .container {
+    padding: 16px;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 12px 16px;
+  }
+  
+  .nav-user {
+    gap: 12px !important;
+  }
+  
+  .user-info {
+    display: none; /* Hide username/role on very small screens, keep avatar/dropdown if any */
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+  
+  .card {
+    padding: 16px;
+  }
+  
+  /* Make horizontal scrolling standard for tables */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -16px; /* Bleed edge on mobile inside card */
+    padding: 0 16px;
+  }
+  
+  /* Mobile Menu Container */
+  .mobile-menu-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: rgba(3, 3, 3, 0.98);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+    z-index: 99;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  }
+
+  .mobile-menu-container .btn-ghost {
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    margin: 0 !important;
+    justify-content: flex-start;
+  }
+  
+  .mobile-menu-container .btn-danger {
+    margin-top: 8px !important;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Modal responsive adjustments */
+  .modal-content {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 10px !important;
+    height: 90vh !important;
+  }
+}
+
+/* Hide hamburger on desktop */
+@media (min-width: 769px) {
+  .mobile-menu-toggle {
+    display: none;
+  }
+  .desktop-menu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-menu {
+    display: none !important;
+  }
+  .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+  }
+}

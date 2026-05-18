@@ -90,7 +90,7 @@ export default function IncidentTable({ incidents = [], onView, apiBase = "/api"
   };
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div className="table-responsive" style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--panel-border)' }}>

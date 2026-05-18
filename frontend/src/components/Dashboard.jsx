@@ -265,7 +265,7 @@ export default function Dashboard({ apiBase = "/api" }) {
       <Navbar />
 
       <div className="container animate-fade-in">
-        <div className="grid" style={{ gridTemplateColumns: "1fr 350px", alignItems: "start" }}>
+        <div className="grid dashboard-layout">
 
           {/* Main Column */}
           <div className="grid" style={{ gap: 24 }}>

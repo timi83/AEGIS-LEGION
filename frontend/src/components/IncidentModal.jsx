@@ -153,7 +153,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)' }}>
-            <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '700px', height: '80vh', display: 'flex', flexDirection: 'column', margin: '24px', border: '1px solid var(--panel-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+            <div className="card animate-fade-in modal-content" style={{ width: '100%', maxWidth: '700px', height: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--panel-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
 
                 {/* Header */}
                 <div className="flex justify-between items-center mb-0" style={{ borderBottom: '1px solid var(--panel-border)', padding: '16px', background: 'rgba(255,255,255,0.02)' }}>

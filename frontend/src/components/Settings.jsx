@@ -21,7 +21,16 @@ export default function Settings() {
                 {isMobile ? (
                     <div className="accordion-header" onClick={() => setActiveSection(activeSection === id ? null : id)}>
                         <h2>{title}</h2>
-                        <span style={{color: 'var(--accent)'}}>{activeSection === id ? '▼' : '▶'}</span>
+                        <svg 
+                            width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                            style={{ 
+                                color: 'var(--accent)', 
+                                transition: 'transform 0.3s ease',
+                                transform: activeSection === id ? 'rotate(180deg)' : 'rotate(0deg)'
+                            }}
+                        >
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
                     </div>
                 ) : (
                     <h2 style={{ fontSize: 20, marginBottom: 15, borderBottom: '1px solid #333', paddingBottom: 10 }}>
@@ -194,14 +203,17 @@ export default function Settings() {
                 {error && <div style={{ color: 'red' }}>{error}</div>}
 
                 <SectionCard id="profile" title="User Profile">
-                    <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10 }}>
-                        <div style={{ color: 'var(--muted)' }}>Username:</div>
-                        <div>{user?.username}</div>
-                        <div style={{ color: 'var(--muted)' }}>Role:</div>
-                        <div style={{ textTransform: 'uppercase', color: 'var(--accent)' }}>{user?.role}</div>
-                        <div style={{ color: 'var(--muted)' }}>Email:</div>
-                        <div>{user?.email || 'N/A'}</div>
-                        <div style={{ color: 'var(--muted)', alignSelf: 'center' }}>Organization:</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '150px 1fr', gap: isMobile ? 6 : 10 }}>
+                        <div style={{ color: 'var(--muted)', fontSize: isMobile ? 12 : 14 }}>Username:</div>
+                        <div style={{ marginBottom: isMobile ? 12 : 0 }}>{user?.username}</div>
+                        
+                        <div style={{ color: 'var(--muted)', fontSize: isMobile ? 12 : 14 }}>Role:</div>
+                        <div style={{ textTransform: 'uppercase', color: 'var(--accent)', marginBottom: isMobile ? 12 : 0 }}>{user?.role}</div>
+                        
+                        <div style={{ color: 'var(--muted)', fontSize: isMobile ? 12 : 14 }}>Email:</div>
+                        <div style={{ marginBottom: isMobile ? 12 : 0 }}>{user?.email || 'N/A'}</div>
+                        
+                        <div style={{ color: 'var(--muted)', alignSelf: 'center', fontSize: isMobile ? 12 : 14 }}>Organization:</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{ fontWeight: 'bold' }}>{user?.organization || 'N/A'}</div>
                             {user?.role === 'admin' && (

@@ -176,8 +176,8 @@ export default function Rules({ apiBase = "/api" }) {
                                                 )}
                                             </div>
                                             <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4 }}>{r.description}</div>
-                                            <div style={{ marginTop: 6, fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--primary)" }}>
-                                                {JSON.stringify(r.conditions)}
+                                            <div style={{ marginTop: 6, fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--primary)", wordBreak: "break-all", whiteSpace: "pre-wrap", background: "rgba(0,0,0,0.2)", padding: "8px", borderRadius: "4px" }}>
+                                                {JSON.stringify(r.conditions, null, 2)}
                                             </div>
                                         </div>
                                         <div>

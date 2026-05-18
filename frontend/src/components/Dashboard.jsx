@@ -319,7 +319,7 @@ export default function Dashboard({ apiBase = "/api" }) {
         position: 'fixed',
         bottom: 30,
         right: 30,
-        zIndex: 100,
+        zIndex: 40,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-end',

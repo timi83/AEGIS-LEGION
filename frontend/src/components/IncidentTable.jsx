@@ -331,8 +331,28 @@ export default function IncidentTable({ incidents = [], onView, apiBase = "/api"
               </div>
             </div>
 
-            <div className="mobile-card-footer">
-              <button onClick={() => onView(i)} className="btn-ghost" style={{ width: '100%', padding: '8px', border: '1px solid var(--accent)', color: 'var(--accent)' }}>VIEW & CHAT</button>
+            <div className="mobile-card-footer" style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => onView(i)} className="btn-ghost" style={{ flex: 1, padding: '8px', border: '1px solid var(--accent)', color: 'var(--accent)' }}>VIEW</button>
+              
+              {user?.role === 'analyst' && (!i.assignees || i.assignees.length === 0) && (
+                  <button
+                    onClick={(e) => submitAssignment(i.id, "me")}
+                    className="btn-ghost"
+                    style={{ flex: 1, padding: '8px', border: '1px solid var(--ok)', color: 'var(--ok)', background: 'rgba(0, 255, 180, 0.1)' }}
+                  >
+                    ⚡ TAKE
+                  </button>
+              )}
+              
+              {user?.role === 'admin' && (
+                  <button
+                    onClick={(e) => handleAssignClick(e, i)}
+                    className="btn-ghost"
+                    style={{ flex: 1, padding: '8px', border: '1px dashed var(--text-muted)', color: 'var(--text-muted)' }}
+                  >
+                    + ASSIGN
+                  </button>
+              )}
             </div>
           </div>
         ))}

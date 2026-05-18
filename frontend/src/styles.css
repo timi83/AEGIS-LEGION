@@ -544,6 +544,10 @@ body {
     display: none !important;
   }
   
+  .hide-on-mobile {
+    display: none !important;
+  }
+  
   .mobile-card-list {
     display: flex;
     flex-direction: column;

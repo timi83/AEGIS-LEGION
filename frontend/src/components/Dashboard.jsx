@@ -315,7 +315,7 @@ export default function Dashboard({ apiBase = "/api" }) {
       </div>
 
       {/* Floating Action Button Container */}
-      <div style={{
+      <div className="hide-on-mobile" style={{
         position: 'fixed',
         bottom: 30,
         right: 30,

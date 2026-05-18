@@ -90,7 +90,8 @@ export default function IncidentTable({ incidents = [], onView, apiBase = "/api"
   };
 
   return (
-    <div className="table-responsive" style={{ overflowX: 'auto' }}>
+    <div>
+      <div className="table-responsive mobile-hide-table" style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--panel-border)' }}>
@@ -274,6 +275,68 @@ export default function IncidentTable({ incidents = [], onView, apiBase = "/api"
           ))}
         </tbody>
       </table>
+      </div>
+
+      <div className="mobile-show-only mobile-card-list" style={{ marginTop: '16px' }}>
+        {sortedIncidents.map((i) => (
+          <div key={i.id} className="mobile-card-item">
+            <div className="mobile-card-header">
+              <span className={`badge ${i.severity}`}>{i.severity}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontSize: '12px' }}>#{i.org_incident_id || i.id}</span>
+            </div>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#fff' }}>{i.title}</h3>
+            
+            <div className="mobile-card-body">
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Status</div>
+                <select
+                  value={i.status}
+                  onChange={(e) => updateStatus(i.id, e.target.value)}
+                  className="select"
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    width: '100%',
+                    marginTop: '4px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid',
+                    borderColor:
+                      (i.status?.toLowerCase() === 'open') ? '#00b8ff' :
+                        (i.status?.toLowerCase() === 'investigating') ? '#d600ff' :
+                          (i.status?.toLowerCase() === 'mitigated') ? '#00ffff' :
+                            (i.status?.toLowerCase() === 'resolved') ? '#00ff9d' : '#444',
+                    color:
+                      (i.status?.toLowerCase() === 'open') ? '#00b8ff' :
+                        (i.status?.toLowerCase() === 'investigating') ? '#d600ff' :
+                          (i.status?.toLowerCase() === 'mitigated') ? '#00ffff' :
+                            (i.status?.toLowerCase() === 'resolved') ? '#00ff9d' : '#888'
+                  }}
+                >
+                  <option value="open">OPEN</option>
+                  <option value="investigating">INVESTIGATING</option>
+                  <option value="mitigated">MITIGATED</option>
+                  <option value="resolved">RESOLVED</option>
+                  <option value="closed">CLOSED</option>
+                </select>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Server</div>
+                <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                    {i.source ? `🖥️ ${i.source}` : 'System'}
+                </div>
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Timestamp</div>
+                <div style={{ fontSize: '12px', marginTop: '4px' }}>{i.timestamp ? new Date(i.timestamp).toLocaleString() : "-"}</div>
+              </div>
+            </div>
+
+            <div className="mobile-card-footer">
+              <button onClick={() => onView(i)} className="btn-ghost" style={{ width: '100%', padding: '8px', border: '1px solid var(--accent)', color: 'var(--accent)' }}>VIEW & CHAT</button>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {assignPopover && (
         <AssignPopover

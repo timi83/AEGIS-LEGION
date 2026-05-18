@@ -2,9 +2,41 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import Navbar from './Navbar';
 import { AuthContext } from '../context/AuthContext';
-import ServerAccessModal from './ServerAccessModal'; // Import
+import ServerAccessModal from './ServerAccessModal';
 
 export default function Settings() {
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [activeSection, setActiveSection] = useState('profile');
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const SectionCard = ({ id, title, children }) => {
+        const isOpen = !isMobile || activeSection === id;
+        return (
+            <div className={isMobile ? "accordion-item" : "card"} style={{ marginBottom: isMobile ? 12 : 30 }}>
+                {isMobile ? (
+                    <div className="accordion-header" onClick={() => setActiveSection(activeSection === id ? null : id)}>
+                        <h2>{title}</h2>
+                        <span style={{color: 'var(--accent)'}}>{activeSection === id ? '▼' : '▶'}</span>
+                    </div>
+                ) : (
+                    <h2 style={{ fontSize: 20, marginBottom: 15, borderBottom: '1px solid #333', paddingBottom: 10 }}>
+                        {title}
+                    </h2>
+                )}
+                
+                {isOpen && (
+                    <div className={isMobile ? "accordion-content" : ""}>
+                        {children}
+                    </div>
+                )}
+            </div>
+        );
+    };
     const { token, refreshUser } = useContext(AuthContext);
     const [user, setUser] = useState(null);
     const [apiKey, setApiKey] = useState('');
@@ -157,14 +189,11 @@ export default function Settings() {
     return (
         <div className="dashboard-container">
             <Navbar />
-            <div className="content-area" style={{ padding: 40 }}>
+            <div className="content-area" style={{ padding: isMobile ? '20px 10px' : 40 }}>
                 <h1 className="title">Command Center Settings</h1>
                 {error && <div style={{ color: 'red' }}>{error}</div>}
 
-                <div className="card" style={{ marginBottom: 30 }}>
-                    <h2 style={{ fontSize: 20, marginBottom: 15, borderBottom: '1px solid #333', paddingBottom: 10 }}>
-                        User Profile
-                    </h2>
+                <SectionCard id="profile" title="User Profile">
                     <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10 }}>
                         <div style={{ color: 'var(--muted)' }}>Username:</div>
                         <div>{user?.username}</div>
@@ -191,13 +220,10 @@ export default function Settings() {
                             )}
                         </div>
                     </div>
-                </div>
+                </SectionCard>
 
                 {user?.role === 'admin' && (
-                    <div className="card" style={{ marginBottom: 30 }}>
-                        <h2 style={{ fontSize: 20, marginBottom: 15, borderBottom: '1px solid #333', paddingBottom: 10 }}>
-                            User Management (Admin Only)
-                        </h2>
+                    <SectionCard id="users" title="User Management (Admin Only)">
 
                         <div style={{ marginBottom: 20 }}>
                             <h3 style={{ fontSize: 16, marginBottom: 10, color: 'var(--accent)' }}>Create New User</h3>
@@ -287,13 +313,10 @@ export default function Settings() {
                             </tbody>
                         </table>
                         </div>
-                    </div>
+                    </SectionCard>
                 )}
 
-                <div className="card" style={{ marginBottom: 30 }}>
-                    <h2 style={{ fontSize: 20, marginBottom: 15, borderBottom: '1px solid #333', paddingBottom: 10 }}>
-                        API Access
-                    </h2>
+                <SectionCard id="api" title="API Access">
                     <p style={{ marginBottom: 15, color: 'var(--muted)' }}>
                         Use this key in your <code>agent.py</code> to authenticate your servers.
                     </p>
@@ -340,12 +363,9 @@ export default function Settings() {
                             ⬇ DOWNLOAD AGENT SCRIPT
                         </button>
                     </div>
-                </div>
+                </SectionCard>
 
-                <div className="card" style={{ marginBottom: 30 }}>
-                    <h2 style={{ fontSize: 20, marginBottom: 15, borderBottom: '1px solid #333', paddingBottom: 10 }}>
-                        Audit History
-                    </h2>
+                <SectionCard id="audit" title="Audit History">
                     {auditLogs.length === 0 ? (
                         <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No audit records found.</div>
                     ) : (
@@ -380,12 +400,9 @@ export default function Settings() {
                         </table>
                         </div>
                     )}
-                </div>
+                </SectionCard>
 
-                <div className="card">
-                    <h2 style={{ fontSize: 20, marginBottom: 15, borderBottom: '1px solid #333', paddingBottom: 10 }}>
-                        Asset Inventory (Servers)
-                    </h2>
+                <SectionCard id="servers" title="Asset Inventory (Servers)">
                     {servers.length === 0 ? (
                         <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No servers connected yet.</div>
                     ) : (
@@ -456,7 +473,7 @@ export default function Settings() {
                         </table>
                         </div>
                     )}
-                </div>
+                </SectionCard>
             </div>
 
             {accessModalServer && (

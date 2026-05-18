@@ -153,18 +153,18 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)' }}>
-            <div className="card animate-fade-in modal-content" style={{ width: '100%', maxWidth: '700px', height: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--panel-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+            <div className="card animate-fade-in modal-content mobile-fullscreen-modal" style={{ width: '100%', maxWidth: '700px', height: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--panel-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
 
                 {/* Header */}
-                <div className="flex justify-between items-center mb-0" style={{ borderBottom: '1px solid var(--panel-border)', padding: '16px', background: 'rgba(255,255,255,0.02)' }}>
-                    <div>
+                <div className="flex items-center mb-0" style={{ borderBottom: '1px solid var(--panel-border)', padding: '16px', background: 'rgba(255,255,255,0.02)', gap: '16px' }}>
+                    <button onClick={onClose} className="btn-ghost" style={{ padding: '8px', fontSize: '24px', opacity: 0.7 }}>←</button>
+                    <div style={{ flex: 1 }}>
                         <div className="flex items-center gap-3 mb-1">
                             <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontSize: '12px', opacity: 0.7 }}>INCIDENT #{incident.id}</span>
                             <span className={`badge ${incident.severity}`}>{incident.severity}</span>
                         </div>
-                        <h2 className="text-xl font-bold" style={{ color: '#fff', letterSpacing: '0.5px' }}>{incident.title}</h2>
+                        <h2 className="text-xl font-bold" style={{ color: '#fff', letterSpacing: '0.5px', margin: 0 }}>{incident.title}</h2>
                     </div>
-                    <button onClick={onClose} className="btn-ghost" style={{ padding: '8px', fontSize: '18px', opacity: 0.7 }}>✕</button>
                 </div>
 
                 {/* Description */}
@@ -273,7 +273,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                 </div>
 
                 {/* Input Area with Autocomplete */}
-                <div style={{ position: 'relative' }}>
+                <div className="mobile-chat-input-container" style={{ position: 'relative' }}>
                     {showSuggestions && (
                         <div className="card animate-fade-in" style={{
                             position: 'absolute',

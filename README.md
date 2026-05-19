@@ -559,4 +559,4 @@ This project is proprietary. All rights reserved.
 
 ---
 
-*Built with precision by a solo engineer. Every line of code, from the ML pipeline to the CSS animations, was crafted by one person.*
+*Built with precision by Abioye Timileyin .C. Every line of code, from the ML pipeline to the CSS animations, was crafted by Timi.*

@@ -517,13 +517,13 @@ The platform uses **Server-Sent Events** for live data synchronization:
 
 ## 7. Deployment & Hosting
 
-The platform is currently deployed as:
+The platform is deployed using a modern JAMstack architecture:
 
-| Component | Host | URL |
-|-----------|------|-----|
-| Frontend | Vercel | `aegis-legion.vercel.app` |
-| Backend | Render | `aegis-legion.onrender.com` |
-| Database | PostgreSQL (Render) | Internal connection |
+| Component | Host Type | Notes |
+|-----------|-----------|-------|
+| Frontend | Static CDN (e.g., Vercel/Netlify) | Global edge deployment for low-latency access |
+| Backend | Container Platform (e.g., Render/Railway) | Auto-scaling with zero-downtime deploys |
+| Database | Managed PostgreSQL | Hosted with automated backups |
 
 The agent can be deployed on **any Linux or Windows server** as a background service.
 
@@ -539,4 +539,4 @@ The agent can be deployed on **any Linux or Windows server** as a background ser
 
 ---
 
-*AEGIS-LEGION — Built from scratch, by one engineer, for the future of cloud security.*
+*AEGIS-LEGION — Built from scratch, by Abioye Timileyin .C for the future of cloud security.*

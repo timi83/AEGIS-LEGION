@@ -92,11 +92,11 @@ ctdirp_scaffold_fastapi/
 | **SQLAlchemy** | 2.0 | ORM + database abstraction | Industry-standard Python ORM. Supports SQLite (dev) and PostgreSQL (prod) with zero code changes. |
 | **PostgreSQL** | 14+ | Production database | ACID-compliant, handles concurrent writes from multiple agents. Scales horizontally with read replicas. |
 | **SQLite** | 3.x | Local development database | Zero-config, file-based. Ideal for single-developer iteration without running a DB server. |
-| **python-jose** | 3.3+ | JWT token creation/verification | Lightweight, supports HS256/RS256. Used for stateless auth. |
-| **passlib** | 1.7+ | Password hashing (sha256_crypt) | Secure, configurable context. Uses sha256_crypt as primary scheme with bcrypt fallback for Docker compatibility. |
+| **python-jose** | 3.3+ | JWT token creation/verification | Lightweight, industry-standard. Used for stateless auth. |
+| **passlib** | 1.7+ | Password hashing | Secure, configurable context with multiple algorithm support. |
 | **scikit-learn** | 1.3+ | ML anomaly detection (Isolation Forest) | Production-grade, minimal dependencies. Isolation Forest excels at unsupervised anomaly detection with small sample sizes. |
 | **joblib** | 1.3+ | ML model persistence | Efficient serialization of trained scikit-learn models to disk. |
-| **SlowAPI** | 0.1+ | Rate limiting | Prevents DoS on the ingest endpoint. Configurable per-route limits (e.g., `5/second`). |
+| **SlowAPI** | 0.1+ | Rate limiting | Prevents DoS on critical endpoints. Configurable per-route limits. |
 | **Jinja2** | 3.x | Email HTML templating | Server-side rendering for branded welcome and alert emails. |
 | **Resend** | API v1 | Transactional email delivery | Modern API-based email. Fallback to raw SMTP for self-hosted deployments. |
 | **Kafka** *(optional)* | 3.x | Event streaming (disabled by default) | For high-throughput deployments. Events are processed synchronously by default (direct mode). |
@@ -282,7 +282,7 @@ sudo systemctl start aegis-agent
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `POST /api/ingest/` | POST | API Key or JWT | Ingest a security event (rate limited: 5/sec) |
+| `POST /api/ingest/` | POST | API Key or JWT | Ingest a security event (rate limited) |
 
 **Request Body:**
 ```json
@@ -344,7 +344,7 @@ sudo systemctl start aegis-agent
 
 The platform supports two authentication methods:
 
-1. **JWT Bearer Token** — Used by the dashboard UI. Tokens expire after 30 minutes.
+1. **JWT Bearer Token** — Used by the dashboard UI. Tokens have a configurable expiry.
 2. **X-API-Key Header** — Used by server agents. Keys are generated per-user via the Settings page.
 
 ### Role-Based Access Control (RBAC)
@@ -374,7 +374,7 @@ The rule engine processes every ingested event against user-defined rules. Rules
 
 1. **DB Rules First**: Fetches enabled rules scoped to the event's organization. Targeted rules (server-specific) are evaluated before global rules.
 2. **Incident Merge**: If an open incident already exists for the same source + event type, the alert is merged (alert count incremented, severity escalated if warranted).
-3. **Fallback Rules**: If no DB rules exist, hardcoded rules handle critical event types (`login_failed`, `malware_detected`, `ransomware_activity`, `privilege_escalation`, `ml_anomaly`).
+3. **Fallback Rules**: If no user-defined DB rules exist, built-in fallback rules handle known critical event types automatically.
 
 ---
 
@@ -396,14 +396,14 @@ The platform uses scikit-learn's `IsolationForest` for unsupervised anomaly dete
 
 ### Lifecycle
 
-1. **Training Phase**: The detector buffers the first 100 heartbeat events to learn "normal" behavior.
+1. **Training Phase**: The detector buffers an initial set of heartbeat events to learn "normal" behavior.
 2. **Pending Approval**: After training, the model enters a dormant state until an admin approves it (anti-data-poisoning measure).
-3. **Active Inference**: Once approved, the model scores every heartbeat. Anomalies (prediction = `-1`) trigger an `ml_anomaly` event that feeds back into the rule engine.
+3. **Active Inference**: Once approved, the model scores every heartbeat. Anomalies trigger an alert event that feeds back into the rule engine.
 4. **Reset**: Admins can reset the model to force retraining (useful after infrastructure changes).
 
 ### Multi-Tenant Isolation
 
-Each `(organization_id, server_hostname)` pair gets its own independent `IsolationForest` model. Models are persisted to `models/model_org_{id}_src_{hostname}.pkl`.
+Each `(organization_id, server_hostname)` pair gets its own independent `IsolationForest` model. Models are persisted to disk for recovery across restarts.
 
 ---
 
@@ -523,7 +523,7 @@ AEGIS-LEGION is fully multi-tenant. Data isolation is enforced at the database q
 | `KAFKA_ENABLED` | No | `false` | Enable Kafka event streaming |
 | `KAFKA_BOOTSTRAP_SERVERS` | No | `localhost:9092` | Kafka broker address |
 | `FRONTEND_URL` | No | `http://localhost:5173` | Used in email links |
-| `AGENT_API_URL` | No (Agent) | `https://aegis-legion.onrender.com/api` | Backend URL for agent |
+| `AGENT_API_URL` | No (Agent) | `https://your-backend.com/api` | Backend URL for agent |
 | `AGENT_API_KEY` | **Yes** (Agent) | — | API key generated from Settings page |
 
 ---
@@ -531,10 +531,10 @@ AEGIS-LEGION is fully multi-tenant. Data isolation is enforced at the database q
 ## Security Considerations
 
 1. **JWT Secret**: The backend will **crash on startup** if `JWT_SECRET` is not set. This is intentional — it prevents running with a default/empty secret.
-2. **Password Hashing**: Uses `sha256_crypt` as the primary scheme with `bcrypt` fallback. Passwords are length-validated (max 72 bytes) before hashing.
-3. **Rate Limiting**: The `/api/ingest/` endpoint is rate-limited to `5 requests/second` per client to prevent DoS attacks.
+2. **Password Hashing**: Uses industry-standard hashing algorithms with automatic salting. Passwords are length-validated before hashing.
+3. **Rate Limiting**: Critical endpoints are rate-limited per client to prevent DoS attacks.
 4. **ML Data Poisoning Protection**: Trained ML models enter a "Pending Approval" state. An admin must explicitly approve the model before it begins active inference.
-5. **API Key Authentication**: Agent API keys are generated server-side and stored hashed. They can be regenerated at any time.
+5. **API Key Authentication**: Agent API keys are generated server-side with secure random generation. They can be rotated at any time.
 6. **RBAC Enforcement**: All endpoints validate the user's role. Viewers cannot post notes, analysts cannot assign others, and only admins can manage users and servers.
 7. **Database Files**: `*.db` and `*.sqlite` files are in `.gitignore` to prevent accidental exposure of local development data.
 
@@ -547,7 +547,7 @@ AEGIS-LEGION is fully multi-tenant. Data isolation is enforced at the database q
 | Backend crashes on start | Missing `JWT_SECRET` | Set the `JWT_SECRET` environment variable |
 | Agent returns `401` | Invalid or missing API key | Generate a new key in Settings → API Access |
 | No incidents appearing | No rules defined | Create rules in the Rules page, or check fallback rule conditions |
-| ML model stuck in "Training" | Less than 100 heartbeats received | Wait for the agent to send 100 heartbeat events (~17 minutes) |
+| ML model stuck in "Training" | Insufficient heartbeats received | Wait for the agent to send enough heartbeat events (check ML Monitor for progress) |
 | Emails not sending | Missing `RESEND_API_KEY` or SMTP credentials | Configure at least one email provider in environment variables |
 | Frontend can't reach backend | Wrong `VITE_API_URL` | Verify the URL in `frontend/.env` matches your running backend |
 

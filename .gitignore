@@ -52,7 +52,6 @@ cover/
 node_modules/
 dist/
 build/
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -64,7 +63,6 @@ build/
 .vscode/
 
 # Environment Variables (CRITICAL)
-.env
 cloud-threat-detection-platform/backend/.env
 backend/.env
 
@@ -84,3 +82,4 @@ debug_*.log
 # OS
 .DS_Store
 Thumbs.db
+config.bat

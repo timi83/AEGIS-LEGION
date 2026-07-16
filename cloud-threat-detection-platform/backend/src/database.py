@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Get DB URL from environment or fallback to SQLite for local development
 # Get DB URL from environment or fallback to Postgres for local development
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/ctdirp_db") # Update in propduction
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/ctdirp_db").strip()
 
 # Create SQLAlchemy engine
 if DATABASE_URL.startswith("sqlite"):

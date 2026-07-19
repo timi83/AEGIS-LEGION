@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from src.database import Base
+from src.models.server import server_assignments
 
 class User(Base):
     __tablename__ = "users"
@@ -26,4 +27,4 @@ class User(Base):
     brand_organization = relationship("Organization", back_populates="users")
 
     # Assigned Servers (Many-to-Many)
-    assigned_servers = relationship("Server", secondary="server_assignments", back_populates="allowed_users")
+    assigned_servers = relationship("Server", secondary=server_assignments, back_populates="allowed_users")

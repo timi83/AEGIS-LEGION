@@ -1,9 +1,17 @@
 # src/models/incident.py
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from src.database import Base
+
+# Association Table Definition being available in metadata
+incident_assignments = Table(
+    'incident_assignments', Base.metadata,
+    Column('incident_id', Integer, ForeignKey('incidents.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    extend_existing=True
+)
 
 # -----------------------------
 # INCIDENT MODEL (String-based for stability)
@@ -47,13 +55,5 @@ class Incident(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Many-to-Many Assignment
-    assignees = relationship("src.models.user.User", secondary="incident_assignments", backref="assigned_incidents")
+    assignees = relationship("User", secondary=incident_assignments, backref="assigned_incidents")
 
-# Association Table Definition being available in metadata
-from sqlalchemy import Table
-incident_assignments = Table(
-    'incident_assignments', Base.metadata,
-    Column('incident_id', Integer, ForeignKey('incidents.id'), primary_key=True),
-    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
-    extend_existing=True
-)

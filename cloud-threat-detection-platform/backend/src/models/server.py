@@ -1,7 +1,14 @@
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Float
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Float, Table
 from datetime import datetime
 from src.database import Base
+
+# Association Table for Many-to-Many
+server_assignments = Table(
+    'server_assignments', Base.metadata,
+    Column('server_id', Integer, ForeignKey('servers.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+)
 
 class Server(Base):
     __tablename__ = "servers"
@@ -28,12 +35,5 @@ class Server(Base):
     # Granular Access Control
     # Many-to-Many: Server <-> User (for assignment)
     from sqlalchemy.orm import relationship
-    allowed_users = relationship("User", secondary="server_assignments", back_populates="assigned_servers")
+    allowed_users = relationship("User", secondary=server_assignments, back_populates="assigned_servers")
 
-from sqlalchemy import Table
-# Association Table for Many-to-Many
-server_assignments = Table(
-    'server_assignments', Base.metadata,
-    Column('server_id', Integer, ForeignKey('servers.id'), primary_key=True),
-    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
-)

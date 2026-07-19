@@ -40,9 +40,10 @@ export default function ServerAccessModal({ server, users, onClose, token, apiBa
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+            background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+            padding: 16
         }} onClick={onClose}>
-            <div className="card" style={{ width: 400, maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="card" style={{ width: '100%', maxWidth: 400, maxHeight: '85dvh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                 <h2 style={{ borderBottom: '1px solid #333', paddingBottom: 10, marginBottom: 15 }}>
                     Manage Access: {server.hostname}
                 </h2>

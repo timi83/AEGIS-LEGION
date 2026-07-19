@@ -38,10 +38,10 @@ export default function ResetPassword() {
 
     return (
         <div style={{
-            height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexDirection: 'column'
+            minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexDirection: 'column', padding: 16
         }}>
-            <div className="card" style={{ width: 400, padding: 40, textAlign: 'center' }}>
+            <div className="card" style={{ width: '100%', maxWidth: 400, padding: 'clamp(24px, 6vw, 40px)', textAlign: 'center' }}>
                 <h1 className="title" style={{ fontSize: 24, marginBottom: 20 }}>Reset Password</h1>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>

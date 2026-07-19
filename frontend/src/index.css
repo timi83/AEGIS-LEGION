@@ -25,12 +25,17 @@
 html,
 body {
   height: 100%;
+  /* Never let any child force the page wider than the screen (kills the
+     horizontal "dancing" / pinch-zoom on mobile). */
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 #root {
   height: 100%;
   position: relative;
   z-index: 2;
+  max-width: 100%;
 }
 
 body {
@@ -40,6 +45,26 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
   position: relative;
   overflow-x: hidden;
+}
+
+/* Global overflow guards: media/canvas/tables must never exceed their box. */
+img,
+svg,
+canvas,
+video,
+table {
+  max-width: 100%;
+}
+
+/* iOS Safari zooms the whole page in when a focused input has a font-size
+   below 16px. Force >=16px on form controls at mobile widths to stop the
+   unwanted auto-zoom. */
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Subtle Shield Outline Background */

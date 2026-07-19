@@ -50,14 +50,15 @@ export default function Register() {
 
     return (
         <div style={{
-            height: '100vh',
+            minHeight: '100dvh',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            padding: 16
         }}>
-            <div className="card" style={{ width: 400, padding: 40, textAlign: 'center' }}>
-                <h1 className="title" style={{ fontSize: 32, marginBottom: 20 }}>New Operative</h1>
+            <div className="card" style={{ width: '100%', maxWidth: 400, padding: 'clamp(24px, 6vw, 40px)', textAlign: 'center' }}>
+                <h1 className="title" style={{ fontSize: 'clamp(24px, 7vw, 32px)', marginBottom: 20 }}>New Operative</h1>
 
                 {error && <div style={{ color: 'var(--danger)', marginBottom: 10 }}>{error}</div>}
                 {success && <div style={{ color: 'var(--ok)', marginBottom: 10 }}>{success}</div>}

@@ -23,7 +23,7 @@ export default function LandingPage() {
     return (
         <div style={{
             position: 'relative',
-            minHeight: '100vh',
+            minHeight: '100dvh',
             overflow: 'hidden',
 
             // backgroundColor: 'black', // Removed to reveal dots
@@ -101,7 +101,7 @@ export default function LandingPage() {
             <div className="scan-line" style={{ animationDelay: '10s', boxShadow: '0 0 60px rgba(0,255,157,0.3)' }} />
 
             {/* Content Container */}
-            <div style={{ position: 'relative', zIndex: 30, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            <div style={{ position: 'relative', zIndex: 30, display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
 
                 {/* Navbar */}
                 <nav style={{

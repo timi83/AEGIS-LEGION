@@ -674,7 +674,9 @@ body {
 }
 
 .modal {
-  background: var(--panel, #141414);
+  /* Solid background — the --panel token is semi-transparent, which made the
+     dashboard show through the dialog. */
+  background: #0d0f11;
   border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
   border-radius: 16px;
   width: 100%;

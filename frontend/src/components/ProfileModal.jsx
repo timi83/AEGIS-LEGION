@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 
 const ProfileModal = ({ open, onClose, user, onUpdate }) => {
@@ -36,9 +37,9 @@ const ProfileModal = ({ open, onClose, user, onUpdate }) => {
         }
     };
 
-    return (
-        <div className="modal-overlay">
-            <div className="modal">
+    return createPortal(
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Identity Configuration</h2>
                     <button className="btn-icon" onClick={onClose}>&times;</button>
@@ -79,7 +80,8 @@ const ProfileModal = ({ open, onClose, user, onUpdate }) => {
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

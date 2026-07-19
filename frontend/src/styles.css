@@ -425,10 +425,24 @@ body {
   .dashboard-layout {
     grid-template-columns: 1fr;
   }
-  
+
   .container {
     padding: 16px;
   }
+}
+
+/* Safety net: grid/flex children default to min-width:auto and refuse to
+   shrink below their content, which can push the layout wider than the
+   screen. Allow them to shrink, and break long strings inside cards. */
+.grid,
+.dashboard-layout,
+.grid > *,
+.dashboard-layout > * {
+  min-width: 0;
+}
+
+.card {
+  overflow-wrap: anywhere;
 }
 
 .form-grid {
@@ -440,14 +454,36 @@ body {
 @media (max-width: 768px) {
   .navbar {
     padding: 12px 16px;
+    gap: 8px;
   }
-  
+
+  /* Let the flex children shrink instead of forcing the bar (and the whole
+     page) wider than the screen. */
+  .nav-brand,
+  .nav-user {
+    min-width: 0;
+  }
+
+  .nav-logo {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .nav-user {
     gap: 12px !important;
+    flex-shrink: 0;
   }
-  
+
   .user-info {
     display: none; /* Hide username/role on very small screens, keep avatar/dropdown if any */
+  }
+
+  /* The "SYSTEM ONLINE" pill is the widest navbar item; hide it on phones so
+     the bar never exceeds the screen (status is also shown in Quick Stats). */
+  .nav-status {
+    display: none;
   }
 
   .stat-grid {

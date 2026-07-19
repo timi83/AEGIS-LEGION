@@ -1,18 +1,27 @@
 import sqlalchemy
 from sqlalchemy import create_engine, text
 import urllib.parse
+import os
+import sys
 
-# User provided: postgresql://postgres:Rniarns2004!@db.ayrmsijnhvbygqvpcpvd.supabase.co:5432/postgres
+# Load credentials from environment variables
+password = os.getenv("SUPABASE_PASSWORD")
+host = os.getenv("SUPABASE_HOST")
 
-password = "Rniarns2004!"
+if not password or not host:
+    print("❌ Error: SUPABASE_PASSWORD and SUPABASE_HOST environment variables are not set.")
+    print("Please set them before running the script, e.g.:")
+    print("  $env:SUPABASE_PASSWORD=\"your_password\"")
+    print("  $env:SUPABASE_HOST=\"your_host_address\"")
+    sys.exit(1)
+
 # While ! is usually safe, we will try both raw and encoded if raw fails.
 # But logically, we check "Raw" first as that's what the user will paste.
 encoded_password = urllib.parse.quote_plus(password) 
 
-host = "db.ayrmsijnhvbygqvpcpvd.supabase.co"
-port = "5432"
-dbname = "postgres"
-user = "postgres"
+port = os.getenv("SUPABASE_PORT", "5432")
+dbname = os.getenv("SUPABASE_DB", "postgres")
+user = os.getenv("SUPABASE_USER", "postgres")
 
 # Construct URI 
 db_url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"

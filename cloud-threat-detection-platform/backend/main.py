@@ -70,9 +70,16 @@ env_origins = os.getenv("ALLOWED_ORIGINS")
 if env_origins:
     origins = [origin.strip() for origin in env_origins.split(",")]
 
+# Support dynamic origins like Vercel preview URLs via regex
+env_origins_regex = os.getenv("ALLOWED_ORIGINS_REGEX")
+if not env_origins_regex:
+    # Default regex to match Vercel preview deployments for this project
+    env_origins_regex = r"https://aegis-legion-.*\.vercel\.app"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,  # Secured to only allowed origins (Not '*')
+    allow_origin_regex=env_origins_regex,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

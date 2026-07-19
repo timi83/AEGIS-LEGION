@@ -2,9 +2,21 @@ import sqlalchemy
 from sqlalchemy import create_engine, text
 import urllib.parse
 import socket
+import os
+import sys
+
+# Load credentials from environment variables
+password = os.getenv("SUPABASE_PASSWORD")
+host = os.getenv("SUPABASE_HOST")
+
+if not password or not host:
+    print("❌ Error: SUPABASE_PASSWORD and SUPABASE_HOST environment variables are not set.")
+    print("Please set them before running the script, e.g.:")
+    print("  $env:SUPABASE_PASSWORD=\"your_password\"")
+    print("  $env:SUPABASE_HOST=\"your_host_address\"")
+    sys.exit(1)
 
 # Troubleshooting DNS first
-host = "db.ayrmsijnhvbygqvpcpvd.supabase.co"
 try:
     print(f"Resolving {host}...")
     ais = socket.getaddrinfo(host, 5432)
@@ -13,7 +25,6 @@ try:
 except Exception as e:
     print(f"❌ DNS Resolution Failed: {e}")
 
-password = "Rniarns2004!"
 encoded_password = urllib.parse.quote_plus(password) # Becomes Rniarns2004%21 probably
 
 print(f"Testing with encoded password: {encoded_password}")

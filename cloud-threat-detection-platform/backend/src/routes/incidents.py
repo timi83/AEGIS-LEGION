@@ -12,6 +12,22 @@ import json
 
 router = APIRouter(prefix="/incidents", tags=["Incidents"])
 
+
+def _get_incident_scoped(incident_id: int, current_user: User, db: Session) -> Incident:
+    """
+    Fetch an incident by id, enforcing multi-tenant isolation.
+    Raises 404 if the incident does not exist OR belongs to another organization,
+    so cross-tenant probing cannot distinguish "not found" from "not yours".
+    """
+    incident = db.query(Incident).filter(
+        Incident.id == incident_id,
+        Incident.organization_id == current_user.organization_id,
+    ).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return incident
+
+
 @router.post("/", response_model=dict)
 def create_incident(title: str, description: str, severity: str, status: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     
@@ -80,8 +96,6 @@ def get_all_incidents(db: Session = Depends(get_db), current_user: User = Depend
                 query = db.query(Incident).filter(Incident.user_id == current_user.id)
             
         incidents = query.order_by(Incident.timestamp.desc()).all()
-            
-        incidents = query.order_by(Incident.timestamp.desc()).all()
         return [
             {
                 "id": i.id,
@@ -92,7 +106,6 @@ def get_all_incidents(db: Session = Depends(get_db), current_user: User = Depend
                 "severity": i.severity,
                 "status": i.status,
                 "response_notes": i.response_notes,
-                "alert_count": getattr(i, "alert_count", 1),
                 "alert_count": getattr(i, "alert_count", 1),
                 "timestamp": i.timestamp,
                 "assignees": [{"username": u.username, "role": u.role} for u in i.assignees]
@@ -108,9 +121,7 @@ def get_all_incidents(db: Session = Depends(get_db), current_user: User = Depend
 
 @router.get("/{incident_id}", response_model=dict)
 def get_incident(incident_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    incident = _get_incident_scoped(incident_id, current_user, db)
 
     return {
         "id": incident.id,
@@ -121,7 +132,6 @@ def get_incident(incident_id: int, db: Session = Depends(get_db), current_user: 
         "status": incident.status,
         "response_notes": incident.response_notes,
         "alert_count": getattr(incident, "alert_count", 1),
-        "alert_count": getattr(incident, "alert_count", 1),
         "timestamp": incident.timestamp,
         "assignees": [{"username": u.username, "role": u.role} for u in incident.assignees]
     }
@@ -129,9 +139,7 @@ def get_incident(incident_id: int, db: Session = Depends(get_db), current_user: 
 
 @router.delete("/{incident_id}", response_model=dict)
 def delete_incident(incident_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    incident = _get_incident_scoped(incident_id, current_user, db)
 
     db.delete(incident)
     db.commit()
@@ -140,10 +148,7 @@ def delete_incident(incident_id: int, db: Session = Depends(get_db), current_use
 
 @router.put("/{incident_id}/update-status")
 async def update_incident_status(incident_id: int, new_status: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    incident = _get_incident_scoped(incident_id, current_user, db)
 
     old_status = incident.status
     incident.status = new_status
@@ -192,7 +197,8 @@ async def update_incident_status(incident_id: int, new_status: str, db: Session 
 
 @router.get("/{incident_id}/notes", response_model=List[dict])
 def get_incident_notes(incident_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Check access (TODO: strict RBAC if needed, for now rely on dashboard logic)
+    # Enforce tenant isolation before returning any note content.
+    _get_incident_scoped(incident_id, current_user, db)
     from src.models.incident_note import IncidentNote
     notes = db.query(IncidentNote).filter(IncidentNote.incident_id == incident_id).order_by(IncidentNote.timestamp.asc()).all()
     
@@ -219,9 +225,7 @@ async def create_incident_note(incident_id: int, payload: dict, db: Session = De
     from src.models.notification import Notification
     import re
     
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    incident = _get_incident_scoped(incident_id, current_user, db)
 
     content = payload.get("note") or payload.get("content")
     if not content:
@@ -284,9 +288,6 @@ async def create_incident_note(incident_id: int, payload: dict, db: Session = De
     db.commit()
     db.refresh(new_note)
 
-    db.commit()
-    db.refresh(new_note)
-
     # Broadcast Note
     note_payload = {
         "id": new_note.id,
@@ -313,8 +314,6 @@ async def create_incident_note(incident_id: int, payload: dict, db: Session = De
 
     return {"message": "Note added", "id": new_note.id}
 
-    return {"message": "Note added", "id": new_note.id}
-
 
 @router.get("/{incident_id}/candidates", response_model=List[dict])
 def get_assignment_candidates(incident_id: int, q: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -323,9 +322,7 @@ def get_assignment_candidates(incident_id: int, q: str = None, db: Session = Dep
     1. Users who have access to the Incident's Server.
     2. All Admins (always eligible).
     """
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    incident = _get_incident_scoped(incident_id, current_user, db)
 
     candidates = {} # Dedupe by ID: {id: User}
 
@@ -393,9 +390,7 @@ async def assign_incident(incident_id: int, payload: dict, db: Session = Depends
     - Analyst: Can only "take" unassigned incidents ("assign_to": "me").
     - Admin: Can multi-assign anyone found in candidates.
     """
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    incident = _get_incident_scoped(incident_id, current_user, db)
 
     assign_input = payload.get("assign_to", "") # Can be string "me" or list ["@bob", "@alice"] or string "@bob @alice"
     
@@ -562,32 +557,4 @@ def _log_assignment_note(db, incident, actor, targets):
      # Let's just assume previous patterns handled it. 
      # Actually, I should just fire the broadcast in the main handler.
      return sys_note
-
-@router.get("/debug/assignment-check")
-def debug_assignment_check(target_username: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """
-    Diagnostic tool to see why assignment fails.
-    Call with ?target_username=analyst
-    """
-    import re
-    assign_text = f"@{target_username}"
-    mentions = re.findall(r"@([\w\-\.]+)", assign_text) # Enhanced regex
-    
-    org_users = db.query(User).filter(User.organization_id == current_user.organization_id).all()
-    
-    matches = []
-    for u in org_users:
-        # Debug case comparison
-        if target_username.lower() == u.username.lower():
-            matches.append(u.username)
-
-    return {
-        "current_user": current_user.username,
-        "current_org_id": current_user.organization_id,
-        "regex_parsed": mentions,
-        "org_users_found_count": len(org_users),
-        "org_users_list": [u.username for u in org_users],
-        "matches": matches,
-        "verdict": "MATCH FOUND" if matches else "NO MATCH - CHECK ORG ID OR SPELLING"
-    }
 

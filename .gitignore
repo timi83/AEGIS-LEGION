@@ -63,8 +63,15 @@ build/
 .vscode/
 
 # Environment Variables (CRITICAL)
+.env
+.env.*
+!.env.example
 cloud-threat-detection-platform/backend/.env
 backend/.env
+
+# Trained ML models (regenerated at runtime; never commit)
+*.pkl
+models/
 
 # Artifacts
 .gemini/
@@ -72,6 +79,9 @@ backend/.env
 logs.txt
 temp_logs.txt
 temp_logs_*.txt
+backend_logs.txt
+startup.log
+ml_report.txt
 debug_*.log
 *.log
 

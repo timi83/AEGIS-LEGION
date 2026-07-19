@@ -3,6 +3,62 @@ import httpx
 from src.models.incident import Incident
 from src.models.incident_note import IncidentNote
 from src.models.notification import Notification
+from src.models.organization import Organization
+from src.models.user import User
+from src.auth.security import get_password_hash
+
+
+@pytest.mark.asyncio
+async def test_incident_cross_tenant_isolation(client: httpx.AsyncClient, db_session, admin_headers, test_admin):
+    """
+    An admin of Org A must NOT be able to read, modify, delete, or read notes of
+    an incident that belongs to Org B. All such attempts must return 404.
+    Regression guard for the cross-tenant IDOR on /api/incidents/{id}.
+    """
+    # Build a completely separate tenant (Org B) with its own incident.
+    org_b = Organization(name="Other Tenant Org")
+    db_session.add(org_b)
+    db_session.commit()
+    db_session.refresh(org_b)
+
+    owner_b = User(
+        username="owner_b",
+        email="owner_b@other.com",
+        organization=org_b.name,
+        organization_id=org_b.id,
+        role="admin",
+        hashed_password=get_password_hash("password123"),
+        is_active=True,
+    )
+    db_session.add(owner_b)
+    db_session.commit()
+    db_session.refresh(owner_b)
+
+    incident_b = Incident(
+        title="Org B secret incident",
+        description="Confidential to Org B",
+        severity="high",
+        status="Open",
+        user_id=owner_b.id,
+        organization_id=org_b.id,
+    )
+    db_session.add(incident_b)
+    db_session.commit()
+    db_session.refresh(incident_b)
+
+    bid = incident_b.id
+
+    # Org A admin (admin_headers) attempts to touch Org B's incident.
+    assert (await client.get(f"/api/incidents/{bid}", headers=admin_headers)).status_code == 404
+    assert (await client.get(f"/api/incidents/{bid}/notes", headers=admin_headers)).status_code == 404
+    assert (await client.put(f"/api/incidents/{bid}/update-status", params={"new_status": "closed"}, headers=admin_headers)).status_code == 404
+    assert (await client.delete(f"/api/incidents/{bid}", headers=admin_headers)).status_code == 404
+
+    # The incident must still exist and be unchanged.
+    db_session.expire_all()
+    still_there = db_session.query(Incident).get(bid)
+    assert still_there is not None
+    assert still_there.status == "Open"
 
 @pytest.mark.asyncio
 async def test_create_incident_api(client: httpx.AsyncClient, admin_headers):

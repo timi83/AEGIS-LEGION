@@ -8,7 +8,50 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
     const [note, setNote] = useState("");
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [descExpanded, setDescExpanded] = useState(false);
     const scrollRef = useRef(null);
+    const cardRef = useRef(null);
+    const textareaRef = useRef(null);
+
+    // On touch devices, Enter should insert a newline (there's a SEND button);
+    // only send-on-Enter with a physical keyboard (fine pointer).
+    const isTouch = typeof window !== "undefined" && window.matchMedia
+        ? window.matchMedia("(pointer: coarse)").matches
+        : false;
+
+    // Keep the modal (and its bottom composer) above the on-screen keyboard.
+    // The visualViewport shrinks when the keyboard opens; size the card to it.
+    useEffect(() => {
+        const vv = window.visualViewport;
+        if (!vv) return;
+        const sync = () => {
+            const el = cardRef.current;
+            if (!el) return;
+            if (window.innerWidth <= 768) {
+                el.style.setProperty("height", `${vv.height}px`, "important");
+                el.style.setProperty("top", `${vv.offsetTop}px`, "important");
+            } else {
+                // Desktop: restore the centered-modal defaults (don't strip
+                // React's inline height, which would collapse the modal).
+                el.style.height = "80vh";
+                el.style.top = "";
+            }
+        };
+        sync();
+        vv.addEventListener("resize", sync);
+        vv.addEventListener("scroll", sync);
+        return () => {
+            vv.removeEventListener("resize", sync);
+            vv.removeEventListener("scroll", sync);
+        };
+    }, []);
+
+    function autoGrowTextarea() {
+        const el = textareaRef.current;
+        if (!el) return;
+        el.style.height = "auto";
+        el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+    }
 
     const [mentionableUsers, setMentionableUsers] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -78,6 +121,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setNote("");
+            if (textareaRef.current) textareaRef.current.style.height = "auto";
             fetchNotes(); // Refresh immediately
         } catch (e) {
             console.error("Failed to add note", e);
@@ -92,6 +136,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
         const val = e.target.value;
         setNote(val);
         setCursorPos(e.target.selectionStart);
+        autoGrowTextarea();
 
         // Check for @ match at cursor
         const lastAt = val.lastIndexOf('@', e.target.selectionStart);
@@ -153,11 +198,11 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)' }}>
-            <div className="card animate-fade-in modal-content mobile-fullscreen-modal" style={{ width: '100%', maxWidth: '700px', height: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--panel-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+            <div ref={cardRef} className="card animate-fade-in modal-content mobile-fullscreen-modal" style={{ width: '100%', maxWidth: '700px', height: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--panel-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
 
                 {/* Header */}
                 <div className="flex items-center mb-0" style={{ borderBottom: '1px solid var(--panel-border)', padding: '16px', background: 'rgba(255,255,255,0.02)', gap: '16px' }}>
-                    <button onClick={onClose} className="btn-ghost" style={{ padding: '8px', fontSize: '24px', opacity: 0.7 }}>←</button>
+                    <button onClick={onClose} className="btn-ghost" style={{ minWidth: '44px', minHeight: '44px', padding: '8px', fontSize: '24px', opacity: 0.7 }}>←</button>
                     <div style={{ flex: 1 }}>
                         <div className="flex items-center gap-3 mb-1">
                             <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontSize: '12px', opacity: 0.7 }}>INCIDENT #{incident.id}</span>
@@ -167,9 +212,29 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                     </div>
                 </div>
 
-                {/* Description */}
-                <div style={{ fontSize: '13px', color: '#aaa', padding: '12px 16px', background: '#0a0a0a', borderBottom: '1px solid var(--panel-border)' }}>
-                    {incident.description}
+                {/* Description (collapsible — it can grow very long as events merge in) */}
+                <div style={{ background: '#0a0a0a', borderBottom: '1px solid var(--panel-border)' }}>
+                    <div style={{
+                        fontSize: '13px',
+                        color: '#bbb',
+                        padding: '12px 16px',
+                        maxHeight: descExpanded ? '40vh' : '4.5em',
+                        overflowY: descExpanded ? 'auto' : 'hidden',
+                        whiteSpace: 'pre-wrap',
+                        overflowWrap: 'anywhere',
+                        WebkitOverflowScrolling: 'touch'
+                    }}>
+                        {incident.description}
+                    </div>
+                    {incident.description && incident.description.length > 140 && (
+                        <button
+                            onClick={() => setDescExpanded(v => !v)}
+                            className="btn-ghost"
+                            style={{ fontSize: '11px', color: 'var(--accent)', padding: '4px 16px 8px', background: 'none', border: 'none' }}
+                        >
+                            {descExpanded ? '▲ Show less' : '▼ Show more'}
+                        </button>
+                    )}
                 </div>
 
                 {/* Chat Area */}
@@ -186,7 +251,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                     }}
                 >
                     {notes.length === 0 ? (
-                        <div style={{ textAlign: 'center', color: '#444', marginTop: '40px', fontSize: '14px', fontStyle: 'italic' }}>
+                        <div style={{ textAlign: 'center', color: '#8a8a8a', marginTop: '40px', fontSize: '14px', fontStyle: 'italic' }}>
                             Start the investigation by adding a note...
                         </div>
                     ) : (
@@ -259,11 +324,13 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                                         borderTopRightRadius: isMe ? '2px' : '12px',
                                         fontSize: '14px',
                                         lineHeight: 1.5,
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                        overflowWrap: 'anywhere',
+                                        whiteSpace: 'pre-wrap'
                                     }}>
                                         {formatMessage(msg.content, isMe)}
                                     </div>
-                                    <div style={{ fontSize: '10px', color: '#444', marginTop: '2px', padding: '0 4px' }}>
+                                    <div style={{ fontSize: '10px', color: '#8a8a8a', marginTop: '2px', padding: '0 4px' }}>
                                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>
                                 </div>
@@ -279,7 +346,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                             position: 'absolute',
                             bottom: '100%',
                             left: '0',
-                            width: '240px',
+                            width: 'min(260px, calc(100vw - 48px))',
                             maxHeight: '200px',
                             overflowY: 'auto',
                             zIndex: 100,
@@ -295,9 +362,9 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                                         key={u.username}
                                         onClick={() => insertMention(u.username)}
                                         style={{
-                                            padding: '8px 12px',
+                                            padding: '11px 14px',
                                             cursor: 'pointer',
-                                            fontSize: '12px',
+                                            fontSize: '13px',
                                             display: 'flex',
                                             justifyContent: 'space-between',
                                             color: '#fff',
@@ -314,6 +381,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                     )}
                     <div className="flex gap-3">
                         <textarea
+                            ref={textareaRef}
                             className="input"
                             rows={1}
                             value={note}
@@ -321,9 +389,11 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                             onClick={(e) => setCursorPos(e.target.selectionStart)}
                             onKeyUp={(e) => setCursorPos(e.target.selectionStart)}
                             placeholder="Type @ to tag..."
-                            style={{ flex: 1, resize: 'none', minHeight: '42px' }}
+                            style={{ flex: 1, resize: 'none', minHeight: '44px', maxHeight: '120px', overflowY: 'auto' }}
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
+                                // Physical keyboard: Enter sends, Shift+Enter = newline.
+                                // Touch: Enter always inserts a newline (use the SEND button).
+                                if (e.key === 'Enter' && !e.shiftKey && !isTouch) {
                                     e.preventDefault();
                                     submitNote();
                                 }
@@ -333,7 +403,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                             onClick={submitNote}
                             disabled={loading}
                             className="btn"
-                            style={{ minWidth: '80px' }}
+                            style={{ minWidth: '80px', minHeight: '44px', flexShrink: 0 }}
                         >
                             SEND
                         </button>

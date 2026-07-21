@@ -56,6 +56,43 @@ async def test_rename_notifies_chat_participants(
 
 
 @pytest.mark.asyncio
+async def test_rename_notifies_tagged_user_who_never_posted(
+    client: httpx.AsyncClient, db_session, admin_headers, test_admin, test_analyst
+):
+    """
+    A user who was only @-mentioned in a shared incident (never posted their own
+    note) must still be notified when a co-participant renames. This matches the
+    'once you have been tagged in a chat' intent.
+    """
+    from src.models.incident import Incident
+    from src.models.incident_note import IncidentNote
+    from src.models.notification import Notification
+
+    incident = Incident(
+        title="Tag thread", description="x", severity="low", status="Open",
+        user_id=test_admin.id, organization_id=test_admin.organization_id,
+    )
+    db_session.add(incident)
+    db_session.commit()
+    db_session.refresh(incident)
+
+    # Only the admin posts — and tags the analyst. The analyst never posts.
+    db_session.add(IncidentNote(
+        incident_id=incident.id, user_id=test_admin.id,
+        content=f"@{test_analyst.username} please take a look",
+    ))
+    db_session.commit()
+
+    old_name = test_admin.username
+    resp = await client.put("/api/me/profile", json={"username": "Renamed Admin"}, headers=admin_headers)
+    assert resp.status_code == 200
+
+    notifs = db_session.query(Notification).filter(Notification.user_id == test_analyst.id).all()
+    assert len(notifs) == 1
+    assert notifs[0].message == f"{old_name} has changed their profile name to Renamed Admin"
+
+
+@pytest.mark.asyncio
 async def test_rename_noop_sends_no_notifications(
     client: httpx.AsyncClient, db_session, admin_headers, test_admin, test_analyst
 ):

@@ -280,44 +280,69 @@ def read_users_me(current_user: User = Depends(get_current_user)):
 
 def _notify_rename_to_chat_participants(db: Session, actor: User, old_username: str, new_username: str):
     """
-    When a user changes their display name, notify everyone they've shared an
+    When a user changes their display name, notify everyone they're in an
     incident chat with. Because chat messages render the author's name live,
     a rename retroactively relabels all their past messages — this preserves
-    the "who was who" context for co-participants.
+    the "who was who" context for the people they've been talking to.
 
-    Recipients = distinct users (same org, excluding the actor) who have
-    authored a note in any incident where the actor has also authored a note.
-    One notification per recipient (deduped across shared incidents).
+    "In the chat" is interpreted broadly to match intent: for every incident
+    the actor participates in (authored a note OR is assigned), recipients are
+    the incident's note authors, assignees, AND anyone @-mentioned in its notes.
+    Same org only, actor excluded, one notification per recipient (deduped).
     """
+    import re
+    from src.models.incident import Incident
     from src.models.incident_note import IncidentNote
     from src.models.notification import Notification
 
     try:
-        # Incidents the actor has participated in (authored any note).
-        incident_ids = [
+        # Incidents the actor is part of: authored a note OR is an assignee.
+        incident_ids = set(
             row[0] for row in db.query(IncidentNote.incident_id)
-            .filter(IncidentNote.user_id == actor.id)
-            .distinct().all()
-        ]
+            .filter(IncidentNote.user_id == actor.id).distinct().all()
+        )
+        try:
+            incident_ids.update(inc.id for inc in actor.assigned_incidents)
+        except Exception:
+            pass
         if not incident_ids:
             return
+        incident_ids = list(incident_ids)
 
-        # Other note authors in those incidents.
-        candidate_ids = [
-            row[0] for row in db.query(IncidentNote.user_id)
-            .filter(
-                IncidentNote.incident_id.in_(incident_ids),
-                IncidentNote.user_id.isnot(None),
-                IncidentNote.user_id != actor.id,
-            )
-            .distinct().all()
-        ]
-        if not candidate_ids:
+        recipient_ids = set()
+
+        # 1) Note authors in those incidents.
+        for row in db.query(IncidentNote.user_id).filter(
+            IncidentNote.incident_id.in_(incident_ids),
+            IncidentNote.user_id.isnot(None),
+        ).distinct().all():
+            recipient_ids.add(row[0])
+
+        # 2) Assignees of those incidents.
+        incidents = db.query(Incident).filter(Incident.id.in_(incident_ids)).all()
+        for inc in incidents:
+            for u in inc.assignees:
+                recipient_ids.add(u.id)
+
+        # 3) Users @-mentioned in the notes of those incidents. Match current org
+        #    usernames against note text (handles multi-word names like "Mr Adun").
+        org_users = db.query(User).filter(User.organization_id == actor.organization_id).all()
+        notes = db.query(IncidentNote).filter(IncidentNote.incident_id.in_(incident_ids)).all()
+        blob = "\n".join((n.content or "").lower() for n in notes)
+        if blob:
+            for u in org_users:
+                if not u.username:
+                    continue
+                if re.search(r"@" + re.escape(u.username.lower()) + r"(?!\w)", blob):
+                    recipient_ids.add(u.id)
+
+        recipient_ids.discard(actor.id)
+        if not recipient_ids:
             return
 
         # Org-scope the recipients (never leak a rename across tenants).
         recipients = db.query(User).filter(
-            User.id.in_(candidate_ids),
+            User.id.in_(list(recipient_ids)),
             User.organization_id == actor.organization_id,
         ).all()
         if not recipients:

@@ -448,7 +448,11 @@ body {
   min-width: 0;
 }
 
-.card {
+/* Break only genuinely long, unbreakable strings inside the mobile incident
+   cards. Do NOT apply this to .card broadly — it collapses table columns and
+   makes every cell wrap letter-by-letter on desktop. Tables scroll via their
+   own .table-responsive (overflow-x: auto) wrapper instead. */
+.mobile-card-item {
   overflow-wrap: anywhere;
 }
 

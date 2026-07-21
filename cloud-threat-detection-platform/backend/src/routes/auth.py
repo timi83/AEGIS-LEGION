@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 import os
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import timedelta
+from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
@@ -278,17 +278,88 @@ from src.schemas.auth import UserResponse
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+def _notify_rename_to_chat_participants(db: Session, actor: User, old_username: str, new_username: str):
+    """
+    When a user changes their display name, notify everyone they've shared an
+    incident chat with. Because chat messages render the author's name live,
+    a rename retroactively relabels all their past messages — this preserves
+    the "who was who" context for co-participants.
+
+    Recipients = distinct users (same org, excluding the actor) who have
+    authored a note in any incident where the actor has also authored a note.
+    One notification per recipient (deduped across shared incidents).
+    """
+    from src.models.incident_note import IncidentNote
+    from src.models.notification import Notification
+
+    try:
+        # Incidents the actor has participated in (authored any note).
+        incident_ids = [
+            row[0] for row in db.query(IncidentNote.incident_id)
+            .filter(IncidentNote.user_id == actor.id)
+            .distinct().all()
+        ]
+        if not incident_ids:
+            return
+
+        # Other note authors in those incidents.
+        candidate_ids = [
+            row[0] for row in db.query(IncidentNote.user_id)
+            .filter(
+                IncidentNote.incident_id.in_(incident_ids),
+                IncidentNote.user_id.isnot(None),
+                IncidentNote.user_id != actor.id,
+            )
+            .distinct().all()
+        ]
+        if not candidate_ids:
+            return
+
+        # Org-scope the recipients (never leak a rename across tenants).
+        recipients = db.query(User).filter(
+            User.id.in_(candidate_ids),
+            User.organization_id == actor.organization_id,
+        ).all()
+        if not recipients:
+            return
+
+        message = f"{old_username} has changed their profile name to {new_username}"
+        for recipient in recipients:
+            db.add(Notification(
+                user_id=recipient.id,
+                title="Teammate renamed",
+                message=message,
+                link=None,
+                timestamp=datetime.utcnow(),
+            ))
+        db.commit()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+        print(f"⚠️ Failed to send rename notifications: {e}")
+
+
 @router.put("/me/profile", response_model=UserResponse)
 def update_user_profile(payload: UserUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Allow user to update their display username or full name."""
-    if payload.username:
+    old_username = current_user.username
+    name_changed = False
+
+    if payload.username and payload.username != current_user.username:
         # Username is now NON-UNIQUE, so we allow any value.
         current_user.username = payload.username
+        name_changed = True
     if payload.full_name:
         current_user.full_name = payload.full_name
-            
+
     db.commit()
     db.refresh(current_user)
+
+    # Notify chat co-participants that this person's display name changed.
+    if name_changed:
+        _notify_rename_to_chat_participants(db, current_user, old_username, current_user.username)
+
     return current_user
 
 class OrganizationUpdate(BaseModel):

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import { EventsContext } from "../context/EventsContext";
@@ -196,19 +197,19 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
         });
     };
 
-    return (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)' }}>
+    return createPortal(
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)' }}>
             <div ref={cardRef} className="card animate-fade-in modal-content mobile-fullscreen-modal" style={{ width: '100%', maxWidth: '700px', height: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--panel-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
 
                 {/* Header */}
-                <div className="flex items-center mb-0" style={{ borderBottom: '1px solid var(--panel-border)', padding: '16px', background: 'rgba(255,255,255,0.02)', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--panel-border)', padding: '16px', background: 'rgba(255,255,255,0.02)', gap: '16px' }}>
                     <button onClick={onClose} className="btn-ghost" style={{ minWidth: '44px', minHeight: '44px', padding: '8px', fontSize: '24px', opacity: 0.7 }}>←</button>
                     <div style={{ flex: 1 }}>
-                        <div className="flex items-center gap-3 mb-1">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
                             <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontSize: '12px', opacity: 0.7 }}>INCIDENT #{incident.id}</span>
                             <span className={`badge ${incident.severity}`}>{incident.severity}</span>
                         </div>
-                        <h2 className="text-xl font-bold" style={{ color: '#fff', letterSpacing: '0.5px', margin: 0 }}>{incident.title}</h2>
+                        <h2 style={{ color: '#fff', letterSpacing: '0.5px', margin: 0, fontSize: '20px', fontWeight: 700, overflowWrap: 'anywhere' }}>{incident.title}</h2>
                     </div>
                 </div>
 
@@ -379,7 +380,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                                 ))}
                         </div>
                     )}
-                    <div className="flex gap-3">
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
                         <textarea
                             ref={textareaRef}
                             className="input"
@@ -410,6 +411,7 @@ export default function IncidentModal({ incident, onClose, apiBase = "/api" }) {
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

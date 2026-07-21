@@ -180,7 +180,7 @@ The dashboard will be available at `http://localhost:5173`.
 
 ### 4. Create Your First Account
 
-Navigate to `http://localhost:5173/register` and create an admin account. The first user in a new organization is automatically granted admin privileges.
+Navigate to `http://localhost:5173/register` and create your account. Registering a new organization provisions its initial administrator. In production, gate who can create organizations (invite-only or approval) rather than leaving registration fully open.
 
 ---
 
@@ -239,6 +239,13 @@ The agent runs two concurrent threads:
 
 ### Running as a Service (Linux)
 
+Run the agent under a dedicated, unprivileged service account — **never as root**. If the agent host or its API key is compromised, the blast radius is limited to that low-privilege account.
+
+```bash
+# Create a locked-down system user for the agent (no login, no home shell)
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin aegis-agent
+```
+
 ```ini
 # /etc/systemd/system/aegis-agent.service
 [Unit]
@@ -247,18 +254,28 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
-Environment="AGENT_API_URL=https://your-backend.com/api"
-Environment="AGENT_API_KEY=your-key"
+User=aegis-agent
+# Keep the API key out of the unit file — read it from a root-owned,
+# 0600 environment file instead of inlining it here.
+EnvironmentFile=/etc/aegis-agent/agent.env
 ExecStart=/usr/bin/python3 /opt/aegis-agent/agent.py
 Restart=always
 RestartSec=5
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
 ```
 
 ```bash
+# /etc/aegis-agent/agent.env  (root-owned, chmod 600)
+# AGENT_API_URL=https://your-backend.com/api
+# AGENT_API_KEY=your-generated-api-key
+
 sudo systemctl enable aegis-agent
 sudo systemctl start aegis-agent
 ```
@@ -363,12 +380,14 @@ The rule engine processes every ingested event against user-defined rules. Rules
 
 ### Condition Matching
 
-| Operator | Syntax | Example |
-|----------|--------|---------|
-| `equals` | Exact string match | `event_type` equals `login_failed` |
-| `contains` | Substring match | `data.path` contains `miner` |
-| `gt` | Greater than (numeric) | `data.cpu` gt `95` |
-| `lt` | Less than (numeric) | `data.ram` lt `10` |
+| Operator | Meaning |
+|----------|---------|
+| `equals` | Exact string match on a field |
+| `contains` | Substring match on a field |
+| `gt` | Greater than (numeric) |
+| `lt` | Less than (numeric) |
+
+Conditions reference event fields by dot-notation path and are combined per rule. Build and tune your own rules from the Rules page; the specific fields, thresholds, and built-in fallbacks are intentionally not enumerated here.
 
 ### Processing Logic
 
@@ -384,15 +403,9 @@ The rule engine processes every ingested event against user-defined rules. Rules
 
 The platform uses scikit-learn's `IsolationForest` for unsupervised anomaly detection on server telemetry.
 
-### Feature Vector (5-dimensional)
+### Feature Vector
 
-| Feature | Source Field |
-|---------|-------------|
-| CPU Usage (%) | `data.cpu` |
-| RAM Usage (%) | `data.ram` |
-| Disk Write Rate (MB/s) | `data.disk_write_mb` |
-| Network Outbound (MB/s) | `data.net_out_mb` |
-| Process Count | `data.process_count` |
+The detector scores a multi-dimensional vector derived from host telemetry — compute, memory, and I/O signals reported by the agent heartbeat. The exact features and weighting are part of the detection model and are not documented publicly.
 
 ### Lifecycle
 
@@ -403,7 +416,7 @@ The platform uses scikit-learn's `IsolationForest` for unsupervised anomaly dete
 
 ### Multi-Tenant Isolation
 
-Each `(organization_id, server_hostname)` pair gets its own independent `IsolationForest` model. Models are persisted to disk for recovery across restarts.
+Each `(organization_id, server_hostname)` pair gets its own independent model. Models are persisted per org+server; for multi-instance deployments, back them with shared/durable storage so model state stays consistent across replicas.
 
 ---
 
@@ -530,13 +543,13 @@ AEGIS-LEGION is fully multi-tenant. Data isolation is enforced at the database q
 
 ## Security Considerations
 
-1. **JWT Secret**: The backend will **crash on startup** if `JWT_SECRET` is not set. This is intentional — it prevents running with a default/empty secret.
-2. **Password Hashing**: Uses industry-standard hashing algorithms with automatic salting. Passwords are length-validated before hashing.
-3. **Rate Limiting**: Critical endpoints are rate-limited per client to prevent DoS attacks.
+1. **JWT Secret**: The backend **refuses to start** if `JWT_SECRET` is not set. This is intentional — it prevents running with a default/empty secret. Use a long, random value and rotate it if it may have been exposed.
+2. **Password Hashing**: Passwords are salted and hashed via passlib's `CryptContext` and length-validated before hashing. Standardizing on a slow, modern algorithm (bcrypt/argon2) as the sole scheme is recommended.
+3. **Rate Limiting**: Applied to selected endpoints (e.g., event ingestion) to blunt abuse. Authentication endpoints should additionally be throttled and paired with account lockout — verify this is configured before exposing the API publicly.
 4. **ML Data Poisoning Protection**: Trained ML models enter a "Pending Approval" state. An admin must explicitly approve the model before it begins active inference.
-5. **API Key Authentication**: Agent API keys are generated server-side with secure random generation. They can be rotated at any time.
-6. **RBAC Enforcement**: All endpoints validate the user's role. Viewers cannot post notes, analysts cannot assign others, and only admins can manage users and servers.
-7. **Database Files**: `*.db` and `*.sqlite` files are in `.gitignore` to prevent accidental exposure of local development data.
+5. **API Key Authentication**: Agent API keys are generated server-side with secure random generation and can be rotated at any time. Treat them as secrets — scope issuance and store/transmit them accordingly.
+6. **Access Control**: Incident, rule, server, and ML data is organization-scoped at the query level, and role checks gate sensitive actions (user and server management, assignment, note posting). Authorization is enforced server-side; review it as part of any deployment.
+7. **Secrets & Data Files**: `.env`, `*.db`, and `*.sqlite` are git-ignored to prevent accidental exposure. Never commit real credentials — configure them via environment variables or a secrets manager.
 
 ---
 

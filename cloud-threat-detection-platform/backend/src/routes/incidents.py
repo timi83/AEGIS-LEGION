@@ -173,7 +173,7 @@ async def update_incident_status(incident_id: int, new_status: str, db: Session 
         "incident_id": incident.id,
         "new_status": incident.status,
         "timestamp": str(incident.updated_at)
-    })
+    }, organization_id=incident.organization_id)
     
     # Broadcast note for the status change
     await broadcaster.publish({
@@ -186,7 +186,7 @@ async def update_incident_status(incident_id: int, new_status: str, db: Session 
             "timestamp": system_note.timestamp.isoformat(),
             "is_system": True
         }
-    })
+    }, organization_id=incident.organization_id)
 
     return {"message": "Status updated successfully"}
 
@@ -301,7 +301,7 @@ async def create_incident_note(incident_id: int, payload: dict, db: Session = De
         "type": "note_added",
         "incident_id": incident.id,
         "note": note_payload
-    })
+    }, organization_id=incident.organization_id)
     
     # TODO: Broadcast Notification to specific users? 
     # For now, frontend will poll or we need a 'private' channel. 
@@ -418,7 +418,7 @@ async def assign_incident(incident_id: int, payload: dict, db: Session = Depends
                 "incident_id": incident.id,
                 "assignees": [{"username": u.username, "role": u.role} for u in incident.assignees],
                 "timestamp": str(datetime.utcnow())
-            })
+            }, organization_id=incident.organization_id)
             
             # System Note
             _log_assignment_note(db, incident, current_user, [current_user])
@@ -494,7 +494,7 @@ async def assign_incident(incident_id: int, payload: dict, db: Session = Depends
             "incident_id": incident.id,
             "assignees": _serialize_assignees(incident),
             "timestamp": str(datetime.utcnow())
-        })
+        }, organization_id=incident.organization_id)
         
         # System Note
         _log_assignment_note(db, incident, current_user, newly_assigned)

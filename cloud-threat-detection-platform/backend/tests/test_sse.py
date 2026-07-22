@@ -37,19 +37,35 @@ async def test_sse_stream_connection_established_invalid_token(db_session):
 
 @pytest.mark.asyncio
 async def test_broadcaster_pub_sub():
-    # Test the broadcaster's core logic directly to avoid client-generator race conditions
-    sid, queue = await broadcaster.subscribe()
+    # Subscriber receives events published to its own organization.
+    sid, queue = await broadcaster.subscribe(organization_id=1)
     try:
         test_event = {"event_type": "ssh_login", "details": "Successful root login from 10.0.0.5"}
-        
-        # Publish to all subscribers
-        await broadcaster.publish(test_event)
-        
-        # Verify event was received in the queue
+        await broadcaster.publish(test_event, organization_id=1)
+
         event_received = await asyncio.wait_for(queue.get(), timeout=1.0)
         assert event_received["event_type"] == "ssh_login"
         assert event_received["details"] == "Successful root login from 10.0.0.5"
     finally:
         await broadcaster.unsubscribe(sid)
+
+
+@pytest.mark.asyncio
+async def test_broadcaster_tenant_isolation():
+    # An event for org 2 must reach org 2 subscribers only — never org 1.
+    sid1, q1 = await broadcaster.subscribe(organization_id=1)
+    sid2, q2 = await broadcaster.subscribe(organization_id=2)
+    try:
+        await broadcaster.publish({"secret": "org2-only"}, organization_id=2)
+
+        received = await asyncio.wait_for(q2.get(), timeout=1.0)
+        assert received["secret"] == "org2-only"
+
+        # The org-1 subscriber must get nothing.
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(q1.get(), timeout=0.3)
+    finally:
+        await broadcaster.unsubscribe(sid1)
+        await broadcaster.unsubscribe(sid2)
 
 

@@ -196,7 +196,10 @@ def start_consumer(loop_forever=True, max_retries=20, retry_delay=5, main_loop=N
                         }
 
                     if main_loop:
-                        asyncio.run_coroutine_threadsafe(broadcaster.publish(payload), main_loop)
+                        _org_id = getattr(incident_obj, "organization_id", None)
+                        asyncio.run_coroutine_threadsafe(
+                            broadcaster.publish(payload, organization_id=_org_id), main_loop
+                        )
                 
                 else:
                     pass

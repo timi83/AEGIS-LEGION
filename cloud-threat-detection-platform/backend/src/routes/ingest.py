@@ -217,8 +217,8 @@ async def ingest_event(
                     "timestamp": inc_data.timestamp.isoformat() if inc_data.timestamp else None
                 }
         
-        # Fire and forget broadcast (or await if fast)
-        await broadcaster.publish(sse_payload)
+        # Fire and forget broadcast (scoped to the event's organization)
+        await broadcaster.publish(sse_payload, organization_id=user.organization_id)
             
     except Exception as e:
         # Log but don't fail the request 500 if rule engine crashes, 

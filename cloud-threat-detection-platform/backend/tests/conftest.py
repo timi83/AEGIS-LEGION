@@ -2,6 +2,12 @@ import os
 os.environ["JWT_SECRET"] = "test_jwt_secret_key_123_test_jwt_secret_key_123"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["KAFKA_ENABLED"] = "false"
+# Disable outbound email in tests. Set before importing the app so main.py's
+# load_dotenv() (override=False) can't reintroduce real SMTP/Resend credentials
+# from a local .env — otherwise background email tasks attempt real network I/O.
+os.environ["ALERT_EMAIL_FROM"] = ""
+os.environ["ALERT_EMAIL_PASSWORD"] = ""
+os.environ["RESEND_API_KEY"] = ""
 
 import pytest
 import asyncio

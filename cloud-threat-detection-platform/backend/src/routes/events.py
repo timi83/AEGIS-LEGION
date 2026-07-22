@@ -10,16 +10,12 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
-async def event_generator(request: Request, token: str):
+async def event_generator(request: Request, organization_id):
     """
-    Generator that yields Server-Sent Events.
-    Requires valid token.
+    Generator that yields Server-Sent Events for a single organization.
+    Subscribes scoped to the caller's org so events never cross tenants.
     """
-    # Verify token manually since this is a generator, 
-    # but we can also do it in the route before yielding.
-    # The route handler below handles the auth check.
-    
-    sid, queue = await broadcaster.subscribe()
+    sid, queue = await broadcaster.subscribe(organization_id)
     try:
         while True:
             # If client disconnected, exit
@@ -44,8 +40,10 @@ async def stream(
     # Validate User
     try:
         user = get_current_user(token, db)
-        # Optional: Check if user is active/authorized (already done by get_current_user)
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid Authentication")
 
-    return StreamingResponse(event_generator(request, token), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(request, user.organization_id),
+        media_type="text/event-stream",
+    )

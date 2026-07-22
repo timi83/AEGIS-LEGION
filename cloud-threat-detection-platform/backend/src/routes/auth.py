@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 import os
+from src.core.limiter import limiter
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
@@ -252,7 +253,8 @@ def delete_user(user_id: int, current_user: User = Depends(get_current_user), db
     return {"message": f"User {user_to_delete.username} deleted."}
 
 @router.post("/token", response_model=Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # The OAuth2 form sends the email in the 'username' field.
     user = db.query(User).filter(User.email == form_data.username).first()
 
@@ -541,7 +543,8 @@ class ResetPasswordSchema(BaseModel):
     new_password: str
 
 @router.post("/forgot-password")
-def forgot_password(payload: EmailSchema, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def forgot_password(request: Request, payload: EmailSchema, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
         # Don't reveal user existence
@@ -576,7 +579,8 @@ def forgot_password(payload: EmailSchema, background_tasks: BackgroundTasks, db:
 
 
 @router.post("/reset-password")
-def reset_password(payload: ResetPasswordSchema, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def reset_password(request: Request, payload: ResetPasswordSchema, db: Session = Depends(get_db)):
     # Verify Signed JWT
     try:
         decoded_payload = jwt.decode(payload.token, SECRET_KEY, algorithms=[ALGORITHM])

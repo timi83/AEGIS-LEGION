@@ -11,7 +11,7 @@ from src.models.user import User
 from src.models.organization import Organization
 from src.models.audit_log import AuditLog
 from src.schemas.auth import UserCreate, UserResponse, Token, AuditLogOut
-from src.auth.security import get_password_hash, verify_password, create_access_token, SECRET_KEY, ALGORITHM
+from src.auth.security import get_password_hash, verify_password, verify_and_update_password, create_access_token, SECRET_KEY, ALGORITHM
 from sqlalchemy.orm import joinedload
 from src.services.email_service import EmailService
 
@@ -35,11 +35,18 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
+        # Reject non-session tokens (e.g. password-reset tokens carry
+        # type="password_reset") from being used as API bearer credentials.
+        if payload.get("type") == "password_reset":
+            raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user = db.query(User).options(joinedload(User.assigned_servers)).filter(User.email == email).first()
     if user is None:
+        raise credentials_exception
+    # Deactivated accounts cannot authenticate (returns 401 so the client logs out).
+    if getattr(user, "is_active", True) is False:
         raise credentials_exception
     return user
 
@@ -246,25 +253,24 @@ def delete_user(user_id: int, current_user: User = Depends(get_current_user), db
 
 @router.post("/token", response_model=Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    print(f"DEBUG: Login attempt for {form_data.username}") # OAuth2 form sends 'username' field, but we assume it contains email
-    try:
-        # LOOKUP BY EMAIL
-        user = db.query(User).filter(User.email == form_data.username).first()
-        print(f"DEBUG: User found by email: {user}")
-    except Exception as e:
-        print(f"DEBUG: CRASH in DB Query: {e}")
-        raise e
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    # The OAuth2 form sends the email in the 'username' field.
+    user = db.query(User).filter(User.email == form_data.username).first()
+
+    ok, new_hash = verify_and_update_password(form_data.password, user.hashed_password) if user else (False, None)
+    if not user or not ok:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    access_token_expires = timedelta(minutes=30)
-    # STORE EMAIL IN TOKEN SUB
+
+    # Transparently upgrade legacy (sha256_crypt) hashes to bcrypt on login.
+    if new_hash:
+        user.hashed_password = new_hash
+        db.commit()
+
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email}, expires_delta=timedelta(minutes=30)
     )
     return {"access_token": access_token, "token_type": "bearer"}
 

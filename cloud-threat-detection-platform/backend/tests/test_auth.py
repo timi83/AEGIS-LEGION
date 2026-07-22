@@ -127,6 +127,38 @@ async def test_rename_noop_sends_no_notifications(
 
 
 @pytest.mark.asyncio
+async def test_login_upgrades_legacy_hash_to_bcrypt(client: httpx.AsyncClient, db_session, test_org):
+    """A pre-existing sha256_crypt hash verifies on login and is transparently
+    re-hashed to bcrypt — no forced password reset."""
+    from passlib.context import CryptContext
+    from src.models.user import User
+
+    legacy_ctx = CryptContext(schemes=["sha256_crypt"])
+    user = User(
+        username="legacy_user",
+        email="legacy@test.com",
+        organization=test_org.name,
+        organization_id=test_org.id,
+        role="admin",
+        hashed_password=legacy_ctx.hash("legacypass123"),
+        is_active=True,
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    assert user.hashed_password.startswith("$5$")  # sha256_crypt
+
+    resp = await client.post(
+        "/api/token",
+        data={"username": "legacy@test.com", "password": "legacypass123"},
+    )
+    assert resp.status_code == 200
+
+    db_session.refresh(user)
+    assert user.hashed_password.startswith("$2")  # upgraded to bcrypt
+
+
+@pytest.mark.asyncio
 async def test_register_success(client: httpx.AsyncClient):
     payload = {
         "username": "newuser",
@@ -205,3 +237,29 @@ async def test_read_users_me(client: httpx.AsyncClient, test_admin, admin_header
 async def test_read_users_me_unauthorized(client: httpx.AsyncClient):
     response = await client.get("/api/me")
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_password_reset_token_rejected_as_session(client: httpx.AsyncClient, test_admin):
+    """A password-reset token must not be usable as an API bearer token."""
+    from datetime import timedelta
+    from src.auth.security import create_access_token
+
+    reset_token = create_access_token(
+        data={"sub": test_admin.email, "type": "password_reset"},
+        expires_delta=timedelta(minutes=15),
+    )
+    resp = await client.get("/api/me", headers={"Authorization": f"Bearer {reset_token}"})
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_deactivated_user_cannot_authenticate(client: httpx.AsyncClient, db_session, test_admin, admin_headers):
+    """Setting is_active=False revokes access even with a valid token."""
+    # Valid while active.
+    assert (await client.get("/api/me", headers=admin_headers)).status_code == 200
+
+    test_admin.is_active = False
+    db_session.commit()
+
+    assert (await client.get("/api/me", headers=admin_headers)).status_code == 401

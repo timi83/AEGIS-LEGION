@@ -11,21 +11,31 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-import sys
+# bcrypt is the primary hashing scheme. sha256_crypt is retained only so that
+# hashes created before the switch still verify (and get transparently upgraded
+# to bcrypt on next login). bcrypt is pinned <4.1 in requirements.txt so passlib
+# 1.7.4 can read its version.
+pwd_context = CryptContext(schemes=["bcrypt", "sha256_crypt"], deprecated="auto")
 
-# Enabling plaintext for recovery in broken environments
-# THIS_SHOULD_CRASH_THE_BACKEND_ON_IMPORT (Removed)
-sys.stderr.write("DEBUG: security.py module loaded\n")
-# NUCLEAR OPTION: Switching to sha256_crypt because bcrypt is incorrectly crashing on length checks in Docker.
-pwd_context = CryptContext(schemes=["sha256_crypt", "bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
-    # print(f"DEBUG: Verifying '{plain_password}' vs '{hashed_password}'") # Reduced log spam
     try:
         return pwd_context.verify(plain_password, hashed_password)
-    except Exception as e:
-        print(f"DEBUG: CRASH in verify_password: {e}")
+    except Exception:
         return False
+
+
+def verify_and_update_password(plain_password, hashed_password):
+    """
+    Verify a password and, if its hash uses a deprecated scheme (e.g. legacy
+    sha256_crypt), return a fresh bcrypt hash to persist — otherwise None.
+    Enables transparent migration to bcrypt on login without forcing resets.
+    Returns (is_valid: bool, new_hash: str | None).
+    """
+    try:
+        return pwd_context.verify_and_update(plain_password, hashed_password)
+    except Exception:
+        return False, None
 
 def get_password_hash(password):
     # Bcrypt Limitation: Max 72 bytes.

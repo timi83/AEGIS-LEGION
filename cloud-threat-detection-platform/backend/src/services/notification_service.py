@@ -24,8 +24,9 @@ def get_env_vars():
         "SLACK_WEBHOOK_URL": os.getenv("SLACK_WEBHOOK_URL"),
         "TELEGRAM_BOT_TOKEN": os.getenv("TELEGRAM_BOT_TOKEN"),
         "TELEGRAM_CHAT_ID": os.getenv("TELEGRAM_CHAT_ID"),
-        # Resend (Standard)
-        "RESEND_API_KEY": os.getenv("RESEND_API_KEY") 
+        # HTTP email providers (work on hosts that block outbound SMTP, e.g. Render)
+        "RESEND_API_KEY": os.getenv("RESEND_API_KEY"),
+        "SENDGRID_API_KEY": os.getenv("SENDGRID_API_KEY"),
     }
 
 # -------------------------------------------------------------------
@@ -67,16 +68,58 @@ def send_via_resend(env, to, subject, html_content):
         logger.error(f"❌ Resend Connection Error: {e}")
         return False
 
+
+def send_via_sendgrid(env, to, subject, html_content):
+    """
+    Sends email via the SendGrid HTTP API (port 443) — works on hosts that block
+    outbound SMTP. The 'from' must be a verified SendGrid sender (Single Sender
+    Verification or an authenticated domain), configured via ALERT_EMAIL_FROM.
+    """
+    from_email = env["EMAIL_FROM"]
+    if not from_email:
+        logger.error("❌ SendGrid: ALERT_EMAIL_FROM is not set (must be your verified sender).")
+        return False
+
+    logger.info(f"🚀 Sending via SendGrid API to {to}...")
+    url = "https://api.sendgrid.com/v3/mail/send"
+    headers = {
+        "Authorization": f"Bearer {env['SENDGRID_API_KEY']}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "personalizations": [{"to": [{"email": to}]}],
+        "from": {"email": from_email, "name": "AEGIS LEGION"},
+        "subject": subject,
+        "content": [{"type": "text/html", "value": html_content}],
+    }
+
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=10)
+        # SendGrid returns 202 Accepted on success.
+        if resp.status_code in (200, 201, 202):
+            logger.info("✅ SendGrid accepted the message (202).")
+            return True
+        logger.error(f"❌ SendGrid Failed ({resp.status_code}): {resp.text}")
+        return False
+    except Exception as e:
+        logger.error(f"❌ SendGrid Connection Error: {e}")
+        return False
+
+
 def send_email_alert(subject: str, body: str, to: str):
     env = get_env_vars()
-    
-    # PRIORITY 1: Use Resend if available
+
+    # PRIORITY 1: Resend (HTTP 443)
     if env["RESEND_API_KEY"]:
         return send_via_resend(env, to, subject, body)
 
-    # PRIORITY 2: Fallback to SMTP
+    # PRIORITY 2: SendGrid (HTTP 443)
+    if env["SENDGRID_API_KEY"]:
+        return send_via_sendgrid(env, to, subject, body)
+
+    # PRIORITY 3: Fallback to SMTP (blocked on some hosts, e.g. Render)
     if not env["EMAIL_FROM"] or not env["EMAIL_PASSWORD"]:
-        logger.warning("⚠️ Email alerts disabled (missing credentials). Check ALERT_EMAIL_FROM environment variable.") 
+        logger.warning("⚠️ Email alerts disabled (no RESEND_API_KEY / SENDGRID_API_KEY, and missing SMTP credentials).")
         return False
 
     msg = MIMEText(body, "html")

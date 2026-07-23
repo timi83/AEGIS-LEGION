@@ -45,7 +45,7 @@ def send_via_resend(env, to, subject, html_content):
     }
     
     payload = {
-        "from": "CTDIRP Platform <onboarding@resend.dev>",
+        "from": "AEGIS LEGION <onboarding@resend.dev>",
         "to": [to],
         "subject": subject,
         "html": html_content

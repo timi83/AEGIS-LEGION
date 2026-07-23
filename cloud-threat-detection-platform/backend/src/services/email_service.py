@@ -27,65 +27,29 @@ class EmailService:
     @staticmethod
     def send_welcome_email(to_email, username, organization, login_url=None):
         """
-        Sends a welcome email with an embedded dashboard preview image.
+        Render and send the branded welcome email.
+
+        The dashboard preview is loaded from a hosted URL in the template, so a
+        single HTML body works over both delivery paths (Resend API and SMTP) —
+        no MIME image attachment / Content-ID juggling required.
         """
+        from datetime import datetime
+
         if login_url is None:
             login_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-        from email.mime.image import MIMEImage
-        from src.services.notification_service import send_mime_message
 
-        subject = "Welcome to CTDIRP Platform"
         context = {
             "username": username,
             "organization": organization,
-            "login_url": login_url
+            "login_url": login_url,
+            "year": datetime.now().year,
         }
-        
+
         html_content = EmailService._render_template("welcome_email.html", context)
         if not html_content:
             return False
 
-        # Create the root message (related allows html + images)
-        msg = MIMEMultipart('related')
-        msg['Subject'] = subject
-        
-        # Encapsulate the plain and HTML versions of the message body in an 'alternative' part
-        msgAlternative = MIMEMultipart('alternative')
-        msg.attach(msgAlternative)
-
-        msgText = MIMEText('Welcome to CTDIRP. Please enable HTML to view this email.', 'plain')
-        msgAlternative.attach(msgText)
-
-        # We reference the image by Content-ID in the HTML: <img src="cid:dashboard_image">
-        msgHtml = MIMEText(html_content, 'html')
-        msgAlternative.attach(msgHtml)
-
-        # Load and attachment the image
-        # email_service.py is in src/services
-        # we want backend/static/images
-        # dirname(__file__) -> src/services
-        # dirname(...) -> src
-        # dirname(...) -> backend
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        img_path = os.path.join(base_dir, "static", "images", "dashboard_preview.png")
-        if os.path.exists(img_path):
-            try:
-                with open(img_path, 'rb') as f:
-                    img_data = f.read()
-                msgImage = MIMEImage(img_data)
-                # Define the image ID
-                msgImage.add_header('Content-ID', '<dashboard_image>')
-                msgImage.add_header('Content-Disposition', 'inline', filename='dashboard_preview.png')
-                msg.attach(msgImage)
-            except Exception as e:
-                print(f"⚠️ Failed to attach image: {e}")
-        else:
-             print(f"⚠️ Image not found at {img_path}")
-
-        # Send
-        return send_mime_message(msg, to_email)
+        return send_email_alert("Welcome to AEGIS LEGION", html_content, to_email)
 
     @staticmethod
     def send_admin_notification_new_user(admin_email, new_username, organization):

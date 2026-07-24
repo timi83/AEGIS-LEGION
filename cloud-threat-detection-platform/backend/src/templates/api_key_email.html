@@ -1,0 +1,49 @@
+{% extends "base_email.html" %}
+
+{% block title %}AEGIS LEGION API key generated{% endblock %}
+{% block preheader %}{% if actor_username %}{{ actor_username }} generated a new API key in your organization.{% else %}A new API key was generated on your account.{% endif %}{% endblock %}
+
+{% block content %}
+<h1 style="margin:0 0 16px 0; font-size:22px; font-weight:700; color:#0b0f14;">
+    New API key generated
+</h1>
+
+{% if actor_username %}
+<p style="margin:0 0 14px 0; font-size:15px; line-height:1.6; color:#3a4551;">
+    <strong style="color:#0b0f14;">{{ actor_username }}</strong> in your organization just generated a
+    new agent API key, ending in <strong style="color:#0b0f14;">…{{ key_suffix }}</strong>.
+</p>
+{% else %}
+<p style="margin:0 0 14px 0; font-size:15px; line-height:1.6; color:#3a4551;">
+    A new agent API key was just generated on your AEGIS LEGION account, ending in
+    <strong style="color:#0b0f14;">…{{ key_suffix }}</strong>. Use it to authenticate the server agents
+    that report into your dashboard.
+</p>
+{% endif %}
+
+<!-- Security note -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">
+    <tr>
+        <td style="background-color:#fff6f6; border-left:3px solid #ff5470; border-radius:6px; padding:12px 16px; font-size:13px; line-height:1.6; color:#7a3a44;">
+            🔒&nbsp;
+            {% if actor_username %}
+            If this wasn't expected, review your organization's API access and rotate the key from
+            <strong>Settings → API Access</strong>.
+            {% else %}
+            If you didn't do this, revoke the key from <strong>Settings → API Access</strong> and reset
+            your password immediately.
+            {% endif %}
+        </td>
+    </tr>
+</table>
+
+<p style="margin:18px 0 0 0; font-size:13px; line-height:1.6; color:#6b7682;">
+    Treat API keys like passwords — never share them or commit them to source control.
+</p>
+{% endblock %}
+
+{% block footer_note %}
+<p style="margin:0 0 5px 0; font-size:12px; line-height:1.5; color:#8a94a0;">
+    This is an automated security message from AEGIS LEGION.
+</p>
+{% endblock %}

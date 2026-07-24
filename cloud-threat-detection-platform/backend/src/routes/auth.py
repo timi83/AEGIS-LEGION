@@ -135,7 +135,7 @@ def register(user: UserCreate, background_tasks: BackgroundTasks, db: Session = 
         raise HTTPException(status_code=500, detail=f"Registration failed: {e}")
 
 @router.post("/users", response_model=UserResponse, dependencies=[Depends(admin_only)])
-def create_user(user: UserCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_user(user: UserCreate, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # db_user = db.query(User).filter(User.username == user.username).first()
     # if db_user:
     #     raise HTTPException(status_code=400, detail="Username already registered")
@@ -162,6 +162,15 @@ def create_user(user: UserCreate, current_user: User = Depends(get_current_user)
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+
+        # Welcome the newly created user (same branded email as self-registration).
+        background_tasks.add_task(
+            EmailService.send_welcome_email,
+            to_email=new_user.email,
+            username=new_user.username,
+            organization=new_user.organization,
+        )
+
         return new_user
     except Exception as e:
         import traceback

@@ -159,6 +159,46 @@ async def test_login_upgrades_legacy_hash_to_bcrypt(client: httpx.AsyncClient, d
 
 
 @pytest.mark.asyncio
+async def test_password_reset_flow(client: httpx.AsyncClient, db_session, test_admin):
+    """A valid reset token sets a new password: the new one logs in, the old one no longer does."""
+    from datetime import timedelta
+    from src.auth.security import create_access_token
+
+    # Same token forgot-password issues.
+    token = create_access_token({"sub": test_admin.email, "type": "password_reset"},
+                                expires_delta=timedelta(minutes=15))
+
+    resp = await client.post("/api/reset-password", json={"token": token, "new_password": "brandNewPass123"})
+    assert resp.status_code == 200
+
+    # New password works.
+    ok = await client.post("/api/token", data={"username": test_admin.email, "password": "brandNewPass123"})
+    assert ok.status_code == 200 and "access_token" in ok.json()
+
+    # Old password is dead.
+    old = await client.post("/api/token", data={"username": test_admin.email, "password": "adminpassword123"})
+    assert old.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_reset_rejects_non_reset_token(client: httpx.AsyncClient, test_admin):
+    """A normal login token (no type=password_reset) can't be used to reset a password."""
+    from src.auth.security import create_access_token
+    token = create_access_token({"sub": test_admin.email})  # no reset type
+    resp = await client.post("/api/reset-password", json={"token": token, "new_password": "whatever123"})
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_forgot_password_no_user_enumeration(client: httpx.AsyncClient, test_admin):
+    """forgot-password returns the same response whether or not the email exists."""
+    r1 = await client.post("/api/forgot-password", json={"email": test_admin.email})
+    r2 = await client.post("/api/forgot-password", json={"email": "nobody@nowhere.test"})
+    assert r1.status_code == 200 and r2.status_code == 200
+    assert r1.json() == r2.json()
+
+
+@pytest.mark.asyncio
 async def test_register_success(client: httpx.AsyncClient):
     payload = {
         "username": "newuser",
